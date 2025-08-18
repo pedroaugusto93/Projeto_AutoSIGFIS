@@ -1,0 +1,24 @@
+﻿# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual env
+venv/
+.env/
+
+# VS Code
+.vscode/
+
+# Logs / temporários
+*.log
+*.tmp
+*.swp
+
+# Office temporários
+~$*
+
+# SO
+.DS_Store
+Thumbs.db
