@@ -23,3 +23,6 @@ virtual/
 # SO
 .DS_Store
 Thumbs.db
+
+# no .gitignore (adicione ao final)
+cadastro.xlsx
