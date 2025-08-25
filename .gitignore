@@ -1,4 +1,6 @@
-﻿# Python
+# Created by venv; see https://docs.python.org/3/library/venv.html
+*
+# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -6,6 +8,7 @@ __pycache__/
 
 # Virtual env
 venv/
+virtual/
 .env/
 
 # VS Code
@@ -16,7 +19,7 @@ venv/
 *.tmp
 *.swp
 
-# Office temporários
+# Office temporários (Word/Excel)
 ~$*
 
 # SO
