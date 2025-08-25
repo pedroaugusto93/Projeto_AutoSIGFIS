@@ -2,7 +2,7 @@
 
 **Português**
 
-Automação em **Python + Selenium** para preenchimento de cadastros no sistema **SIGFIS** (Sistema de Gestão de Fiscalização).  
+Automação em **Python + Selenium** para preenchimento de cadastros de dispensas de licitação no sistema **SIGFIS** (Sistema de Gestão de Fiscalização).  
 O sistema lê dados de uma planilha Excel (`cadastro.xlsx`) e realiza o preenchimento automático das abas:
 
 - Dados Básicos
