@@ -1,187 +1,159 @@
+# page_enviar.py
 
-
-# import os
-# import time
-# import pyautogui
-# from pywinauto.application import Application
-# from selenium.webdriver.common.by import By
-# from selenium.webdriver.support import expected_conditions as EC
-# from helpers import wait_for_page_complete
-
-# # Dicionário global para controlar contadores por PROCESSO
-# processo_contador = {}
-
-# def gerar_nome_arquivo(processo):
-#     base_nome = processo.strip().replace("/", "-")
-#     contador = processo_contador.get(base_nome, 0)
-#     if contador == 0:
-#         nome_final = f"{base_nome}.pdf"
-#     else:
-#         nome_final = f"{base_nome} - {contador}.pdf"
-#     processo_contador[base_nome] = contador + 1
-#     return nome_final
-
-# def enviar_e_imprimir(driver, wait, cfg):
-#     from helpers import aguardar_carregamento_final
-
-#     print("[1] Tentando clicar na aba 'Enviar'")
-#     try:
-#         aba_envio = wait.until(EC.element_to_be_clickable((By.XPATH, "//ul[contains(@class,'nav-tabs')]//a[contains(., 'Enviar')]")))
-#         driver.execute_script("arguments[0].scrollIntoView(true); arguments[0].click();", aba_envio)
-#         wait_for_page_complete(driver, wait)
-#         print("[✔] Aba 'Enviar' acessada")
-#     except:
-#         print("[⚠] Aba 'Enviar' não localizada")
-
-#     # (1) Botão "Enviar ao TCE"
-#     print("[2] Procurando botão 'Enviar ao TCE'")
-#     enviar_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(.,'Enviar ao TCE')]")))
-#     driver.execute_script("arguments[0].scrollIntoView(true); arguments[0].click();", enviar_btn)
-
-#     # (2) Confirmar "Sim"
-#     print("[3] Confirmando SweetAlert (Sim)")
-#     sim_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'swal2-confirm') and contains(.,'Sim')]")))
-#     driver.execute_script("arguments[0].click();", sim_btn)
-
-#     # (3) "Emitir Recibo"
-#     print("[4] Clicando em 'Emitir Recibo'")
-#     emitir_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'swal2-confirm') and contains(.,'Emitir Recibo')]")))
-#     driver.execute_script("arguments[0].click();", emitir_btn)
-
-#     # (4) "Imprimir"
-#     print("[5] Clicando no botão 'Imprimir'")
-#     imprimir_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(.,'Imprimir') and contains(@class,'btn-outline-primary')]")))
-#     driver.execute_script("arguments[0].scrollIntoView(true); arguments[0].click();", imprimir_btn)
-
-#     # (5) Aguarda janela de impressão abrir
-#     time.sleep(2)
-#     print("[6] Pressionando Ctrl+P para abrir janela de impressão")
-#     pyautogui.hotkey("ctrl", "p")
-#     time.sleep(2.5)
-
-#     # (6.1) Garante que destino seja "Salvar como PDF"
-#     print("[6.1] Selecionando destino 'Salvar como PDF'")
-#     pyautogui.press("tab", presses=2, interval=0.2)
-#     pyautogui.press("down", presses=2, interval=0.2)
-#     pyautogui.press("enter")
-#     time.sleep(1)
-
-#     # (6.2) Pressiona Ctrl+S para abrir janela de salvar
-#     print("[6.2] Pressionando Ctrl+S para salvar como PDF")
-#     pyautogui.hotkey("ctrl", "s")
-#     time.sleep(2)
-
-#     # (7) Nome e caminho do arquivo
-#     processo = cfg.get('PROCESSO', 'recibo')
-#     nome_arquivo = gerar_nome_arquivo(processo)
-#     caminho_completo = os.path.join("C:\\Users\\pedro\\Documents\\Sigfis", nome_arquivo)
-#     print(f"[7] Aguardando janela 'Salvar como' para salvar em: {caminho_completo}")
-
-#     # (8) Usa pywinauto para interagir com a janela do Chrome
-#     try:
-#         app = Application(backend="uia").connect(title_re="Salvar.*")
-#         salvar_janela = app.window(title_re="Salvar.*")
-#         salvar_janela.wait("ready", timeout=10)
-
-#         salvar_janela.type_keys(caminho_completo, with_spaces=True)
-#         time.sleep(1)
-
-#         salvar_btn = salvar_janela.child_window(title="Salvar", control_type="Button")
-#         salvar_btn.click_input()
-
-#         print(f"[✔] PDF salvo com sucesso: {caminho_completo}")
-#     except Exception as e:
-#         print(f"[❌] Erro ao salvar o PDF: {e}")
-
-#     time.sleep(2)
-#     aguardar_carregamento_final(driver, wait)
-
-
-import os
-import time
-import pyautogui
-from pywinauto import Desktop
-import config
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from helpers import wait_for_page_complete, aguardar_carregamento_final
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+from helpers import wait_for_page_complete
 
-# Dicionário global para controlar contadores por PROCESSO
-processo_contador = {}
-
-def gerar_nome_arquivo(processo):
-    base_nome = processo.strip().replace("/", "-")
-    contador = processo_contador.get(base_nome, 0)
-    if contador == 0:
-        nome_final = f"{base_nome}.pdf"
-    else:
-        nome_final = f"{base_nome} - {contador}.pdf"
-    processo_contador[base_nome] = contador + 1
-    return nome_final
 
 def enviar_e_imprimir(driver, wait, cfg):
-    print("[1] Tentando clicar na aba 'Enviar'")
-    try:
-        aba_envio = wait.until(EC.element_to_be_clickable((By.XPATH, "//ul[contains(@class,'nav-tabs')]//a[contains(., 'Enviar')]")))
-        driver.execute_script("arguments[0].scrollIntoView(true); arguments[0].click();", aba_envio)
-        wait_for_page_complete(driver, wait)
-        print("[✔] Aba 'Enviar' acessada")
-    except:
-        print("[⚠] Aba 'Enviar' não localizada")
+    # ===================== Helpers =====================
 
-    print("[2] Procurando botão 'Enviar ao TCE'")
-    enviar_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(.,'Enviar ao TCE')]")))
-    driver.execute_script("arguments[0].scrollIntoView(true); arguments[0].click();", enviar_btn)
+    def wait_overlay_disappear():
+        """Aguarda o overlay Angular sumir (quando presente)."""
+        try:
+            wait.until(EC.invisibility_of_element_located(
+                (By.CSS_SELECTOR, ".block-ui-overlay")
+            ))
+        except TimeoutException:
+            pass
 
-    print("[3] Confirmando SweetAlert (Sim)")
-    sim_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'swal2-confirm') and contains(.,'Sim')]")))
-    driver.execute_script("arguments[0].click();", sim_btn)
-    
-    
-    print("[4] Clicando em 'Fechar' para fechar o modal")
-    emitir_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'swal2-confirm') and contains(.,'Fechar')]")))
-    driver.execute_script("arguments[0].click();", emitir_btn)
+    def safe_click(locator, scroll=True):
+        """Rebusca o elemento clicável e executa click via JS (evita intercept/anim.)."""
+        el = wait.until(EC.element_to_be_clickable(locator))
+        if scroll:
+            driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
+        driver.execute_script("arguments[0].click();", el)
+        return el
 
+    def achar_botao_enviar():
+        """Localiza o botão 'Enviar ao TCE' dentro de #BotoesComuns com vários fallbacks."""
+        locators = [
+            (By.XPATH, "//div[@id='BotoesComuns']//button[contains(@class,'btn-outline-success') and contains(normalize-space(.),'Enviar ao TCE')]"),
+            (By.XPATH, "//div[@id='BotoesComuns']//button[.//i[contains(@class,'fa-save')]]"),
+            (By.CSS_SELECTOR, "#BotoesComuns button.btn.btn-outline-success"),
+            (By.XPATH, "//button[contains(@class,'btn-outline-success') and contains(normalize-space(.),'Enviar ao TCE')]"),
+        ]
+        last_exc = None
+        for loc in locators:
+            try:
+                return wait.until(EC.element_to_be_clickable(loc))
+            except Exception as e:
+                last_exc = e
+        raise last_exc if last_exc else Exception("Botão 'Enviar ao TCE' não encontrado.")
 
-    # print("[4] Clicando em 'Emitir Recibo'")
-    # emitir_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'swal2-confirm') and contains(.,'Emitir Recibo')]")))
-    # driver.execute_script("arguments[0].click();", emitir_btn)
+    def _visible_swal_container():
+        return wait.until(EC.visibility_of_element_located(
+            (By.CSS_SELECTOR, "div.swal2-container.swal2-shown, div.swal2-popup.swal2-modal")
+        ))
 
-    # print("[5] Clicando no botão 'Imprimir'")
-    # imprimir_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(.,'Imprimir') and contains(@class,'btn-outline-primary')]")))
-    # driver.execute_script("arguments[0].scrollIntoView(true); arguments[0].click();", imprimir_btn)
+    def _click_swal_confirm_with_labels(*labels):
+        """No SweetAlert2 visível, clica .swal2-confirm cujo texto contenha um dos rótulos."""
+        try:
+            _visible_swal_container()
+        except TimeoutException:
+            return False
 
-    # print("[6] Pressionando Ctrl+P para abrir janela de impressão")
-    # time.sleep(2)
-    # pyautogui.hotkey("ctrl", "p")
-    # time.sleep(2)
+        try:
+            btns = driver.find_elements(
+                By.CSS_SELECTOR,
+                ".swal2-container.swal2-shown button.swal2-confirm, div.swal2-popup.swal2-modal button.swal2-confirm"
+            )
+        except Exception:
+            btns = []
 
-    # print("[6.1] Selecionando destino 'Salvar como PDF'")
-    # pyautogui.press('tab', presses=5, interval=0.2)
-    # pyautogui.press('down')
-    # time.sleep(1)
+        for label in labels:
+            want = label.lower()
+            for b in btns:
+                try:
+                    if not b.is_displayed():
+                        continue
+                    txt = (b.text or "").strip().lower()
+                    if want in txt:
+                        driver.execute_script("arguments[0].focus(); arguments[0].click();", b)
+                        try:
+                            wait.until(EC.staleness_of(b))
+                        except Exception:
+                            wait.until(EC.invisibility_of_element_located(
+                                (By.CSS_SELECTOR, "div.swal2-popup.swal2-modal")
+                            ))
+                        wait_overlay_disappear()
+                        wait_for_page_complete(driver, wait)
+                        return True
+                except StaleElementReferenceException:
+                    return _click_swal_confirm_with_labels(label)
+        return False
 
-    # print("[6.2] Pressionando Ctrl+S para salvar como PDF")
-    # pyautogui.hotkey("ctrl", "s")
-    # time.sleep(2)
+    def click_recibo_cancelar_js():
+        """
+        Fecha o popup de 'Recibo' clicando no botão 'Cancelar' via JS.
+        Não depende de classes Bootstrap; procura por um botão visível com texto 'Cancelar'
+        preferencialmente dentro de um rodapé de popup.
+        """
+        js = r"""
+        const isVisible = el => {
+          if (!el) return false;
+          const s = getComputedStyle(el);
+          const r = el.getBoundingClientRect();
+          return s.display !== 'none' && s.visibility !== 'hidden' && r.width > 0 && r.height > 0;
+        };
 
-    # processo = cfg.get('PROCESSO', 'recibo')
-    # nome_arquivo = gerar_nome_arquivo(processo)
-    # caminho_completo = os.path.join("C:\\Users\\pedro\\Documents\\Sigfis", nome_arquivo)
-    # print(f"[7] Aguardando janela 'Salvar como' para salvar em: {caminho_completo}")
+        // 1) Tenta Cancelar dentro de um 'footer' do popup (mais preciso)
+        let btns = Array.from(document.querySelectorAll(
+          ".modal-footer button, .dialog-footer button, .actions button, button.btn"
+        ));
+        let alvo = btns.find(b => /cancelar/i.test(b.textContent || b.innerText) && isVisible(b));
+        if (!alvo) {
+          // 2) Fallback global: qualquer botão 'Cancelar' visível
+          btns = Array.from(document.querySelectorAll("button"));
+          alvo = btns.find(b => /cancelar/i.test(b.textContent || b.innerText) && isVisible(b));
+        }
+        if (alvo) {
+          alvo.scrollIntoView({block:'center'});
+          alvo.click();
+          return true;
+        }
+        return false;
+        """
+        try:
+            return bool(driver.execute_script(js))
+        except Exception:
+            return False
 
-    # try:
-    #     janela = Desktop(backend="uia").window(title_re="Salvar.*", visible_only=False)
-    #     edit = janela.child_window(auto_id="1001", control_type="Edit")
-    #     edit.set_edit_text(caminho_completo)
+    # ===================== Fluxo =====================
 
-    #     salvar_btn = janela.child_window(control_type="Button", title="Salvar")
-    #     salvar_btn.invoke()
+    wait_overlay_disappear()
 
-    #     print(f"[✔] Recibo salvo como PDF: {caminho_completo}")
-    # except Exception as e:
-    #     print(f"[❌] Erro ao salvar o PDF: {e}")
+    # [1] Enviar ao TCE
+    print("[1] Localizando e clicando em 'Enviar ao TCE'")
+    btn = achar_botao_enviar()
+    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", btn)
+    driver.execute_script("arguments[0].click();", btn)
 
-    # print("[DEBUG] Aguardando carregamento completo final antes de enviar...")
-    # aguardar_carregamento_final(driver, wait)
-    # print("[✔] Página carregada e pronta.")
+    # [2] Confirmações (até 2 em sequência): prioriza 'Emitir', senão 'Sim'
+    print("[2] Confirmando modais ('Emitir' / 'Sim')")
+    confirmed_once = _click_swal_confirm_with_labels("Emitir", "Sim")
+    if confirmed_once:
+        _click_swal_confirm_with_labels("Emitir", "Sim")
+
+    wait_overlay_disappear()
+    wait_for_page_complete(driver, wait)
+
+    # [3] Popup de Recibo → clicar CANCELAR via JS
+    print("[3] Fechando popup 'Recibo' com 'Cancelar'")
+    ok = click_recibo_cancelar_js()
+    if ok:
+        # aguarda sumir qualquer diálogo/popup visível após o clique
+        try:
+            wait.until(EC.invisibility_of_element_located(
+                (By.XPATH, "//*[contains(normalize-space(.),'Recibo')][ancestor::*[contains(@style,'z-index') or contains(@class,'dialog') or contains(@class,'modal')]][1]")
+            ))
+        except Exception:
+            pass
+        print("[✔] Popup 'Recibo' fechado (Cancelar).")
+    else:
+        print("[i] Não achei botão 'Cancelar' do Recibo; seguindo mesmo assim.")
+
+    wait_overlay_disappear()
+    wait_for_page_complete(driver, wait)
+    print("[✔] Envio concluído.")

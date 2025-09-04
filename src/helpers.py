@@ -2,97 +2,130 @@
 import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.keys import Keys
 
-#   Função para esperar a página carregar completamente
-def wait_for_page_complete(driver, wait, extra_delay=0.5):
-    wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
+# Seletores típicos de overlay/loader do seu app (Angular, block-ui, spinners etc.)
+_OVERLAY_SELECTORS = [
+    ".block-ui-overlay",
+    ".block-ui.active",
+    ".ngx-loading",
+    ".loading-overlay",
+    ".loading",
+    ".throbber",
+    ".spinner",
+]
+
+def _has_busy_overlays(driver) -> bool:
+    """
+    Retorna True se algum overlay/loader está visível.
+    Usa querySelector para qualquer seletor da lista _OVERLAY_SELECTORS.
+    """
+    js = """
+      const sels = arguments[0];
+      for (let i = 0; i < sels.length; i++) {
+        const el = document.querySelector(sels[i]);
+        if (!el) continue;
+        const s = getComputedStyle(el);
+        const r = el.getBoundingClientRect();
+        if (s.visibility !== 'hidden' && s.display !== 'none' && r.width > 0 && r.height > 0) {
+          return true;
+        }
+      }
+      return false;
+    """
     try:
-        spinner = (By.CSS_SELECTOR, ".loading-overlay, .spinner, .ng-star-inserted")
-        wait.until(EC.invisibility_of_element_located(spinner))
-    except:
-        pass
-    time.sleep(extra_delay)
+        return bool(driver.execute_script(js, _OVERLAY_SELECTORS))
+    except Exception:
+        # Se o JS falhar por qualquer motivo, não bloqueie o fluxo
+        return False
 
-#    Função para selecionar valor em um <select> via JavaScript
+
+def wait_for_page_complete(driver, wait, extra_delay: float = 0.15, overlay_timeout: float = 4.0):
+    """
+    Espera:
+      1) document.readyState == 'complete'
+      2) ausência de overlays/loader "reais" (timeout curto)
+      3) pequeno respiro (extra_delay)
+    """
+    # 1) DOM pronto
+    wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
+
+    # 2) overlays reais (timeout curto)
+    try:
+        WebDriverWait(driver, overlay_timeout, poll_frequency=0.2).until(
+            lambda d: _has_busy_overlays(d) is False
+        )
+    except TimeoutException:
+        # segue mesmo que algum overlay residual persista
+        pass
+
+    # 3) respiro
+    if extra_delay:
+        time.sleep(extra_delay)
+
+
 def js_select_value(driver, select_el, value):
+    """
+    Define value em <select> escondido (Angular) e dispara eventos.
+    """
     driver.execute_script(
         "arguments[0].value = arguments[1];"
-        "arguments[0].dispatchEvent(new Event('change'));",
+        "arguments[0].dispatchEvent(new Event('input', {bubbles:true}));"
+        "arguments[0].dispatchEvent(new Event('change', {bubbles:true}));",
         select_el, value
     )
 
-#    Função para preencher um campo de input
-def fill_input(driver, wait, selector, value, by=By.CSS_SELECTOR):
-    # Espera o input estar presente, rola até ele, limpa e preenche
-    inp = wait.until(EC.presence_of_element_located((by, selector)))
-    # Rola até o input
-    driver.execute_script("arguments[0].scrollIntoView(true);", inp)
-    # Limpa e preenche
-    inp.clear()
-    # Preenche caractere a caractere para simular digitação humana
-    inp.send_keys(value)
-    return inp
 
-#    Função para aguardar carregamento final
-def aguardar_carregamento_final(driver, wait, timeout=20):
-    #    Aguarda a ausência de elementos .loading ou throbber para garantir que a página está pronta.
+def fill_input(driver, wait, selector, value, by: By = By.CSS_SELECTOR, fire_events: bool = True):
+    """
+    Preenche inputs/textareas com scroll central, limpa com Ctrl+A+Del e dispara eventos.
+    Retorna o elemento.
+    """
+    el = wait.until(EC.presence_of_element_located((by, selector)))
+    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
+
     try:
-        #print("[DEBUG] Aguardando carregamento completo final antes de enviar...")
-        wait.until_not(EC.presence_of_element_located((By.CSS_SELECTOR, ".loading, .throbber, .spinner"))) # Ajuste o seletor conforme necessário
-        time.sleep(1) # Pequeno atraso extra para garantir estabilidade
-        #print("[✔] Página carregada e pronta.")
+        el.click()
     except Exception:
-        #print("[⚠] Timeout: elementos de carregamento ainda visíveis.")
-        pass # Continua mesmo se der timeout
+        pass
 
-# from selenium.webdriver.common.by import By
-# from selenium.webdriver.support import expected_conditions as EC
+    # Limpeza robusta
+    try:
+        el.clear()  # rápido quando suportado
+    except Exception:
+        pass
+    try:
+        el.send_keys(Keys.CONTROL, "a")
+        el.send_keys(Keys.DELETE)
+    except Exception:
+        pass
 
-# def set_field_value(driver, wait, selector, value, by=By.CSS_SELECTOR):
-#     """
-#     Define valor em input, select nativo ou wrapper (<input-select>).
-#     - Localiza por presence (DOM)
-#     - Scroll até o centro
-#     - Injeta valor da forma correta
-#     - Valida que 'value' foi aplicado
-#     Retorna o elemento alvo de valor (o input ou o <select> interno).
-#     """
-#     el = wait.until(EC.presence_of_element_located((by, selector)))
-#     driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
-#     tag = (el.tag_name or '').lower()
+    if value not in (None, ""):
+        el.send_keys(value)
 
-#     # Caso 1: input/textarea
-#     if tag in ("input", "textarea"):
-#         el.clear()
-#         el.send_keys(str(value))
-#         wait.until(lambda d: (el.get_attribute("value") or "").strip() == str(value).strip())
-#         return el
+    if fire_events:
+        # Garante que Angular/validações captem a mudança
+        driver.execute_script(
+            "arguments[0].dispatchEvent(new Event('input', {bubbles:true}));"
+            "arguments[0].dispatchEvent(new Event('change', {bubbles:true}));"
+            "arguments[0].dispatchEvent(new Event('blur', {bubbles:true}));",
+            el
+        )
+    return el
 
-#     # Caso 2: select nativo
-#     if tag == "select":
-#         driver.execute_script("""
-#             arguments[0].value = arguments[1];
-#             arguments[0].dispatchEvent(new Event('input', {bubbles:true}));
-#             arguments[0].dispatchEvent(new Event('change', {bubbles:true}));
-#         """, el, str(value))
-#         wait.until(lambda d: el.get_attribute("value") == str(value))
-#         return el
 
-#     # Caso 3: wrapper (ex.: <input-select>) com <select> interno
-#     try:
-#         inner = el.find_element(By.TAG_NAME, "select")
-#         driver.execute_script("""
-#             arguments[0].value = arguments[1];
-#             arguments[0].dispatchEvent(new Event('input', {bubbles:true}));
-#             arguments[0].dispatchEvent(new Event('change', {bubbles:true}));
-#         """, inner, str(value))
-#         wait.until(lambda d: inner.get_attribute("value") == str(value))
-#         return inner
-#     except Exception:
-#         raise Exception(f"Elemento '{selector}' não é input, select ou wrapper-select")
-
-# def click_js(driver, wait, selector, by=By.CSS_SELECTOR):
-#     el = wait.until(EC.presence_of_element_located((by, selector)))
-#     driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
-#     driver.execute_script("arguments[0].click();", el)
-#     return el
+def aguardar_carregamento_final(driver, wait, timeout: float = 6.0):
+    """
+    Espera final curta para sumir overlays/spinners reais.
+    """
+    try:
+        print("[DEBUG] Aguardando carregamento completo final...")
+        WebDriverWait(driver, timeout, poll_frequency=0.2).until(
+            lambda d: _has_busy_overlays(d) is False
+        )
+        time.sleep(0.1)
+        print("[✔] Página carregada e pronta.")
+    except TimeoutException:
+        print("[⚠] Timeout: overlays ainda aparentes; seguindo assim mesmo.")

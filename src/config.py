@@ -6,15 +6,18 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.support.ui import WebDriverWait
 
 # ─── VARIÁVEIS DE AMBIENTE ──────────────────────────────────────────────────────
 os.environ['WDM_SSL_VERIFY'] = '0'
 
 DEBUGGER_ADDRESS = "127.0.0.1:9222"
-URL_DISPENSA = ("https://www.tcerj.tc.br/sigfis-atosjuridicos/site/admin/dispensas-inexigibilidades/dispensas/criar")
-
-#EXCEL_PATH = r"C:\Users\pedro.naia\OneDrive - MPRJ\Arquivo\Documentos\Projeto_AutoSIGIFIS\cadastro.xlsx" # Caminho do Excel no MPRJ
-EXCEL_PATH = r"C:\Users\pedro\Projeto_AutoSIGIFIS\cadastro.xlsx" # Caminho do Excel no meu PC
+URL_DISPENSA = (
+    "https://www.tcerj.tc.br/"
+    "sigfis-atosjuridicos/site/admin/dispensas-inexigibilidades/dispensas/criar"
+)
+EXCEL_PATH = r"C:\Users\pedro.naia\OneDrive - MPRJ\Arquivo\Documentos\Projeto_AutoSIGIFIS\cadastro.xlsx" # Caminho do Excel no MPRJ
+#EXCEL_PATH = r"C:\Users\pedro\Projeto_AutoSIGIFIS\virtual\cadastro.xlsx" # Caminho do Excel no meu PC
 SHEET_NAME = "Sheet1" # Nome da aba do Excel que contém as configurações
 
 # ─── CONSTANTES FIXAS ───────────────────────────────────────────────────────────
@@ -72,13 +75,13 @@ def load_all_cfgs(path=EXCEL_PATH, sheet=SHEET_NAME):
 
 
 
+
+
 def create_driver_and_wait():
-    """
-    Abre o Chrome em modo de depuração e retorna driver e WebDriverWait de 15s.
-    """
     opts = Options()
     opts.add_experimental_option("debuggerAddress", DEBUGGER_ADDRESS)
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=opts)
-    wait = WebDriverWait(driver, 15)
+    # timeout menor e polling mais rápido
+    wait = WebDriverWait(driver, 8, poll_frequency=0.2)
     return driver, wait
