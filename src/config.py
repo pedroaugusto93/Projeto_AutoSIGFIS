@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
+from helpers import norm_money_digits
 
 # ─── VARIÁVEIS DE AMBIENTE ──────────────────────────────────────────────────────
 os.environ['WDM_SSL_VERIFY'] = '0'
@@ -16,8 +17,8 @@ URL_DISPENSA = (
     "https://www.tcerj.tc.br/"
     "sigfis-atosjuridicos/site/admin/dispensas-inexigibilidades/dispensas/criar"
 )
-EXCEL_PATH = r"C:\Users\pedro.naia\OneDrive - MPRJ\Arquivo\Documentos\Projeto_AutoSIGIFIS\cadastro.xlsx" # Caminho do Excel no MPRJ
-#EXCEL_PATH = r"C:\Users\pedro\Projeto_AutoSIGIFIS\virtual\cadastro.xlsx" # Caminho do Excel no meu PC
+EXCEL_PATH = os.environ.get("SIGFIS_EXCEL_PATH", r"C:\Users\pedro\Projeto_AutoSIGIFIS\Projeto_AutoSIGFIS\src\cadastro.xlsx") # Caminho do Excel no MPRJ
+#EXCEL_PATH = os.environ.get("SIGFIS_EXCEL_PATH", r"C:\Users\pedro\Projeto_AutoSIGIFIS\Projeto_AutoSIGFIS\src\cadastro.xlsx") # Caminho do Excel no meu PC
 SHEET_NAME = "Sheet1" # Nome da aba do Excel que contém as configurações
 
 # ─── CONSTANTES FIXAS ───────────────────────────────────────────────────────────
@@ -29,6 +30,7 @@ UNID_MEDIDA = "37"
 COD_UG_SIAFE = "100100"
 ATO_DOCUMENTO = "1"
 TIPO_DOCUMENTO = "5"
+NUM_ITEM = 1
 
 
 def load_all_cfgs(path=EXCEL_PATH, sheet=SHEET_NAME):
@@ -54,18 +56,19 @@ def load_all_cfgs(path=EXCEL_PATH, sheet=SHEET_NAME):
         cfg.setdefault('NUM_EMPENHO', "")
         cfg.setdefault('FILE_PATH', "")
         # Defaults para itens
-        cfg.setdefault('NUM_ITEM', ITEM_LOTE_VALUE)
+        #cfg.setdefault('NUM_ITEM', ITEM_LOTE_VALUE)
         cfg.setdefault('QTD_ITEM', QTD_ITEM)
 
         # Ajuste de sufixos para valores monetários
         raw = cfg.get('VALOR') or ""
-        cfg['VALOR_EMPENHO'] = cfg.get('VALOR_EMPENHO') or raw
-        cfg['VALOR_UNIT'] = cfg.get('VALOR_UNIT') or (raw + "00")
+        cfg['VALOR_EMPENHO'] = cfg.get('VALOR_EMPENHO') or norm_money_digits(raw)
+        cfg['VALOR_UNIT']    = cfg.get('VALOR_UNIT')    or norm_money_digits(raw)
 
         # ADICIONE ESTA PARTE ABAIXO:
         cfg['COD_UG_SIAFE'] = COD_UG_SIAFE
         cfg['TIPOLOGIA_VALUE'] = TIPOLOGIA_VALUE
-        cfg['ITEM_LOTE_VALUE'] = ITEM_LOTE_VALUE
+        #cfg['ITEM_LOTE_VALUE'] = ITEM_LOTE_VALUE
+        cfg['ITEM_LOTE_VALUE'] = NUM_ITEM
         cfg['FUNDAMENTO_VALUE'] = FUNDAMENTO_VALUE
         cfg['UNID_MEDIDA'] = UNID_MEDIDA
         cfg['ATO_DOCUMENTO'] = ATO_DOCUMENTO

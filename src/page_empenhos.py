@@ -7,15 +7,7 @@ from datetime import datetime
 from selenium.common.exceptions import TimeoutException
 import time
 
-# Função para aguardar carregamento Angular
-def aguardar_carregamento_final(driver, wait):
-    try:
-        wait.until_not(EC.presence_of_element_located((
-            By.CSS_SELECTOR, ".throbber, .ngx-loading, .loading"
-        )))
-        print("[✔] Página carregada e pronta.")
-    except TimeoutException:
-        print("[⚠] Timeout: carregamento demorou demais.")
+from helpers import aguardar_carregamento_final, safe_click
 
 def normaliza_data_empenho(valor):
     try:
@@ -37,7 +29,7 @@ def preencher_empenhos(driver, wait, cfg, *args):
     incluir_btn = wait.until(EC.element_to_be_clickable((By.XPATH,
         "//div[contains(@class,'tab-footer')]//button[contains(normalize-space(.),'Incluir Empenho')]"
     )))
-    driver.execute_script("arguments[0].scrollIntoView(true); arguments[0].click();", incluir_btn)
+    safe_click(driver, wait, incluir_btn)
     wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".modal.show")))
 
     campos = [
@@ -69,17 +61,14 @@ def preencher_empenhos(driver, wait, cfg, *args):
     salvar_btn = wait.until(EC.element_to_be_clickable((By.XPATH,
         "//div[contains(@class,'modal-footer')]//button[@type='submit' and contains(@class,'btn-outline-primary')]"
     )))
-    driver.execute_script("arguments[0].scrollIntoView(true); arguments[0].click();", salvar_btn)
+    safe_click(driver, wait, salvar_btn)
 
     # Espera e clica no OK do SweetAlert2, se aparecer
-    try:
-        ok_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR,
-            "button.swal2-confirm.swal2-styled"
-        )))
-        driver.execute_script("arguments[0].click();", ok_btn)
-        print("SweetAlert2 OK clicado!")
-    except Exception:
-        print("SweetAlert2 OK não apareceu ou já foi fechado.")
+    from helpers import swal_click_confirm
+    if swal_click_confirm(driver, wait, 'OK', 'Confirmar'):
+        print('SweetAlert2 OK clicado!')
+    else:
+        print('SweetAlert2 OK não apareceu ou já foi fechado.')
         time.sleep(1)
 
     wait_for_page_complete(driver, wait)

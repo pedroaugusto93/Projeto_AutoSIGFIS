@@ -129,3 +129,128 @@ def aguardar_carregamento_final(driver, wait, timeout: float = 6.0):
         print("[✔] Página carregada e pronta.")
     except TimeoutException:
         print("[⚠] Timeout: overlays ainda aparentes; seguindo assim mesmo.")
+
+
+def safe_click(driver, wait, locator_or_element, scroll_block: str = 'center', use_js: bool = True):
+    """Click robusto com scroll e fallback JS.
+    Aceita um locator (tuple By, selector) OU um WebElement.
+    """
+    try:
+        from selenium.webdriver.remote.webelement import WebElement
+    except Exception:
+        WebElement = None
+
+    if WebElement and isinstance(locator_or_element, WebElement):
+        el = locator_or_element
+    else:
+        el = wait.until(EC.element_to_be_clickable(locator_or_element))
+
+    try:
+        driver.execute_script(f"arguments[0].scrollIntoView({{block:'{scroll_block}'}});", el)
+    except Exception:
+        pass
+
+    if use_js:
+        try:
+            driver.execute_script("arguments[0].click();", el)
+            return el
+        except Exception:
+            pass
+    # fallback to native click
+    el.click()
+    return el
+
+
+def swal_click_confirm(driver, wait, *labels, timeout: float = 5.0):
+    """Clica no botão de confirmação do SweetAlert2.
+    Se *labels for fornecido, tenta casar texto (ex.: 'OK', 'Sim', 'Emitir').
+    Retorna True se conseguiu clicar, False caso contrário.
+    """
+    try:
+        WebDriverWait(driver, timeout, poll_frequency=0.2).until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, "div.swal2-container.swal2-shown, div.swal2-popup.swal2-modal"))
+        )
+    except Exception:
+        return False
+
+    # Tenta via API primeiro
+    try:
+        api = driver.execute_script("if (window.Swal && Swal.isVisible()) { Swal.clickConfirm(); return true } return false;")
+        if api:
+            return True
+    except Exception:
+        pass
+
+    # Fallback: encontra botões .swal2-confirm
+    btns = driver.find_elements(By.CSS_SELECTOR, ".swal2-container.swal2-shown button.swal2-confirm, div.swal2-popup.swal2-modal button.swal2-confirm")
+    if not btns:
+        return False
+
+    if labels:
+        wants = [str(x).strip().lower() for x in labels if x]
+        for b in btns:
+            try:
+                if not b.is_displayed(): 
+                    continue
+                txt = (b.text or "").strip().lower()
+                if any(w in txt for w in wants):
+                    try:
+                        driver.execute_script("arguments[0].focus(); arguments[0].click();", b)
+                    except Exception:
+                        b.click()
+                    return True
+            except Exception:
+                continue
+
+    # Sem labels ou nenhuma casou: clica no primeiro visível
+    for b in btns:
+        try:
+            if b.is_displayed():
+                try:
+                    driver.execute_script("arguments[0].click();", b)
+                except Exception:
+                    b.click()
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def norm_money_digits(raw: str) -> str:
+    """Normaliza valor monetário em uma string SÓ de dígitos adequada para inputs mascarados de moeda.
+    Exemplos:
+      '1.234,56' -> '123456'
+      '1234.56'  -> '123456'
+      '100'      -> '10000' (interpreta como 100,00)
+      ''         -> ''
+    Regras:
+      - Remove tudo que não for dígito ou separador decimal (vírgula/ponto).
+      - Se houver separador decimal, mantém 2 casas (zerando/podando se necessário) e depois remove o separador.
+      - Se NÃO houver separador, assume que o valor já está em reais e adiciona '00' de centavos.
+    """
+    import re as _re
+    if raw is None:
+        return ""
+    s = str(raw).strip()
+    if not s:
+        return ""
+    # detecta separador decimal (última vírgula ou ponto)
+    last_comma = s.rfind(",")
+    last_dot = s.rfind(".")
+    sep_idx = max(last_comma, last_dot)
+
+    if sep_idx >= 0:
+        int_part = _re.sub(r"\D", "", s[:sep_idx])
+        frac_part = _re.sub(r"\D", "", s[sep_idx+1:])
+        frac_part = (frac_part + "00")[:2] if frac_part else "00"
+        out = (int_part or "0") + frac_part
+        out = out.lstrip("0")
+        if len(out) < 1:
+            out = "0"
+        return out
+    else:
+        only_digits = _re.sub(r"\D", "", s)
+        out = (only_digits or "0") + "00"
+        out = out.lstrip("0")
+        return out or "0"
+

@@ -5,7 +5,37 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-from helpers import fill_input, js_select_value, wait_for_page_complete
+from helpers import fill_input, js_select_value, wait_for_page_complete, safe_click, swal_click_confirm
+
+def _valor_duas_casas(valor_raw: str) -> str:
+    """
+    Normaliza para DUAS casas decimais com vírgula.
+    Exemplos:
+      '125,90' -> '125,90'
+      '125.90' -> '125,90'
+      '12590'  -> '125,90'
+      '12'     -> '12,00'
+    """
+    if not valor_raw:
+        return ""
+    s = str(valor_raw).strip()
+
+    # se veio com separador decimal, normaliza para vírgula
+    if "," in s or "." in s:
+        s = s.replace(".", ",")
+        inteiro, _, frac = s.partition(",")
+        frac = (frac + "00")[:2]
+        return f"{inteiro},{frac}"
+
+    # só dígitos: insere vírgula 2 casas à esquerda
+    dig = "".join(ch for ch in s if ch.isdigit())
+    if not dig:
+        return ""
+    if len(dig) == 1:
+        return f"0,0{dig}"
+    if len(dig) == 2:
+        return f"0,{dig}"
+    return f"{dig[:-2]},{dig[-2:]}"
 
 def preencher_dados_basicos(driver, wait, cfg):
     """
@@ -15,10 +45,6 @@ def preencher_dados_basicos(driver, wait, cfg):
 
     # ===== Helpers locais rápidos =====
     short_wait = WebDriverWait(driver, 3, poll_frequency=0.2)
-
-    def js_click(el):
-        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
-        driver.execute_script("arguments[0].click();", el)
 
     def get_visible(locator):
         return wait.until(EC.visibility_of_element_located(locator))
@@ -36,12 +62,9 @@ def preencher_dados_basicos(driver, wait, cfg):
     js_select_value(driver, sel, config.TIPOLOGIA_VALUE)
     short_wait.until(lambda d: sel.get_attribute('value') == config.TIPOLOGIA_VALUE)
 
-    # 3) Valor
-    fill_input(
-        driver, wait,
-        'input-currency[name="Valor"] input',
-        cfg['VALOR']
-    )
+    # 3) Valor (DUAS casas decimais)
+    valor_norm = _valor_duas_casas(cfg['VALOR'])
+    fill_input(driver, wait, 'input-currency[name="Valor"] input', valor_norm)
 
     # 4) Item/Lote
     wrap = get_visible((By.CSS_SELECTOR, 'input-select[name="TipoLicitacao"]'))
@@ -116,25 +139,13 @@ def preencher_dados_basicos(driver, wait, cfg):
 
     # 11) Salvar
     save_btn = get_visible((By.CSS_SELECTOR, 'button[form="frm"][type="submit"]'))
-    js_click(save_btn)
+    safe_click(driver, wait, save_btn)
     wait_for_page_complete(driver, wait)
 
     # 12) SweetAlert OK (Swal API → instantâneo; fallback: botão)
-    try:
-        # se SweetAlert estiver presente, usa sua API para confirmar
-        ok_via_api = driver.execute_script(
-            "if (window.Swal && Swal.isVisible()) { Swal.clickConfirm(); return true } return false;"
-        )
-        if not ok_via_api:
-            raise Exception("API Swal não visível")
-    except Exception:
-        try:
-            ok_btn = WebDriverWait(driver, 5, poll_frequency=0.2).until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, "button.swal2-confirm.swal2-styled"))
-            )
-            js_click(ok_btn)
-        except TimeoutException:
-            pass  # em alguns cenários não aparece
+        # SweetAlert OK (centralizado em helper)
+    if not swal_click_confirm(driver, wait, 'OK', 'Confirmar'):
+        pass
     wait_for_page_complete(driver, wait)
 
     # 13) Selecionar aba Itens
@@ -142,5 +153,5 @@ def preencher_dados_basicos(driver, wait, cfg):
     itens_link = WebDriverWait(driver, 5, poll_frequency=0.2).until(
         EC.presence_of_element_located((By.XPATH, "(//ul[contains(@class,'nav-tabs')]/li)[2]/a"))
     )
-    js_click(itens_link)
+    safe_click(driver, wait, itens_link)
     wait_for_page_complete(driver, wait)

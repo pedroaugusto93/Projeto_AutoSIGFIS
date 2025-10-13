@@ -4,7 +4,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
-from helpers import wait_for_page_complete, js_select_value
+from helpers import wait_for_page_complete, js_select_value, safe_click, swal_click_confirm
 
 def preencher_documentos(driver, wait, cfg):
     short_wait = WebDriverWait(driver, 4, poll_frequency=0.2)
@@ -17,7 +17,7 @@ def preencher_documentos(driver, wait, cfg):
     incluir_btn = wait.until(EC.presence_of_element_located((
         By.XPATH, "//div[contains(@class,'tab-footer')]//button[contains(.,'Incluir Documento')]"
     )))
-    js_click(incluir_btn)
+    safe_click(driver, wait, incluir_btn)
 
     # (2) Modal aberto
     wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "modal-container[role='dialog']")))
@@ -60,25 +60,21 @@ def preencher_documentos(driver, wait, cfg):
     salvar_btn = wait.until(EC.presence_of_element_located((
         By.XPATH, "//div[contains(@class,'modal-footer')]//button[@type='submit' and contains(@class,'btn-outline-primary')]"
     )))
-    js_click(salvar_btn)
+    safe_click(driver, wait, salvar_btn)
 
     # (7) Espera pós-salvar
     wait_for_page_complete(driver, wait)
 
     # (8) SweetAlert OK (instantâneo via API; fallback no botão)
-    try:
-        ok_via_api = driver.execute_script(
-            "if (window.Swal && Swal.isVisible()) { Swal.clickConfirm(); return true } return false;"
-        )
-        if not ok_via_api:
-            raise Exception()
-    except Exception:
+
+    if not swal_click_confirm(driver, wait, 'OK', 'Confirmar'):
+
         try:
-            ok_btn = WebDriverWait(driver, 3, poll_frequency=0.2).until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, "button.swal2-confirm.swal2-styled"))
+            WebDriverWait(driver, 3, poll_frequency=0.2).until(
+                EC.invisibility_of_element_located((By.CSS_SELECTOR, 'div.swal2-container.swal2-shown, div.swal2-popup.swal2-modal'))
             )
-            js_click(ok_btn)
         except TimeoutException:
             pass
 
     wait_for_page_complete(driver, wait)
+ 

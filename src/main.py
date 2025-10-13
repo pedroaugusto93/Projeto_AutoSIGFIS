@@ -14,7 +14,8 @@ from page_dados_basicos import preencher_dados_basicos
 from page_itens import preencher_itens
 from page_documentos import preencher_documentos
 from page_empenhos import preencher_empenhos
-from page_enviar import enviar_e_imprimir
+from src.page_enviar import enviar_e_imprimir
+
 
 
 def selecionar_aba(driver, wait, titulo: str):
