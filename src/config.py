@@ -17,7 +17,7 @@ URL_DISPENSA = (
     "https://www.tcerj.tc.br/"
     "sigfis-atosjuridicos/site/admin/dispensas-inexigibilidades/dispensas/criar"
 )
-EXCEL_PATH = os.environ.get("SIGFIS_EXCEL_PATH", r"C:\Users\pedro\Projeto_AutoSIGIFIS\Projeto_AutoSIGFIS\src\cadastro.xlsx") # Caminho do Excel no MPRJ
+EXCEL_PATH = os.environ.get("SIGFIS_EXCEL_PATH", r"C:\Users\pedro\OneDrive\Documentos\Projeto_AutoSIGFIS\src\cadastro.xlsx") # Caminho do Excel no MPRJ "
 #EXCEL_PATH = os.environ.get("SIGFIS_EXCEL_PATH", r"C:\Users\pedro\Projeto_AutoSIGIFIS\Projeto_AutoSIGFIS\src\cadastro.xlsx") # Caminho do Excel no meu PC
 SHEET_NAME = "Sheet1" # Nome da aba do Excel que contém as configurações
 

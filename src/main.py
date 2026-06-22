@@ -14,7 +14,7 @@ from page_dados_basicos import preencher_dados_basicos
 from page_itens import preencher_itens
 from page_documentos import preencher_documentos
 from page_empenhos import preencher_empenhos
-from src.page_enviar import enviar_e_imprimir
+
 
 
 
@@ -89,8 +89,6 @@ def main():
                 preencher_empenhos(driver, wait, cfg, valor_p1)
 
                 # === Enviar (aba pode não existir) ===
-                selecionar_aba(driver, wait, "5 - Enviar")
-                enviar_e_imprimir(driver, wait, cfg)
 
                 print(f"[OK] Registro concluído: {proc}")
 
