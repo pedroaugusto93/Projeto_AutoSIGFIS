@@ -99,6 +99,7 @@ def load_all_cfgs(path=EXCEL_PATH, sheet=SHEET_NAME):
                   'DATA_EMPENHO', 'NUM_EMPENHO', 'FILE_PATH'):
             cfg.setdefault(k, "")
         cfg.setdefault('QTD_ITEM', QTD_ITEM)
+        cfg.setdefault('NUM_ITEM', str(NUM_ITEM))  # default "1" se a coluna for removida
 
         # Valores monetários: SEMPRE derivam de VALOR (ignora placeholders da planilha).
         # Antes, um "1" residual na coluna VALOR_EMPENHO virava R$ 0,01 no empenho.

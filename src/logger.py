@@ -88,8 +88,9 @@ class ExecutionReport:
 
     COLUNAS = [
         "registro", "processo", "nome_fornecedor", "cnpj_fornecedor",
-        "valor", "num_empenho", "status", "ultima_aba",
-        "etapa_falha", "erro_tipo", "erro_msg", "duracao_s", "inicio",
+        "valor", "num_empenho", "dispensa_id", "status", "perc_conclusao",
+        "validacoes", "ultima_aba", "etapa_falha", "erro_tipo", "erro_msg",
+        "duracao_s", "inicio",
     ]
 
     def __init__(self):

@@ -10,6 +10,7 @@ from helpers import (
     safe_click, swal_click_confirm, confirm_or_warn,
 )
 from logger import get_logger
+from verify import ler_id_dispensa
 
 log = get_logger("dados_basicos")
 
@@ -163,6 +164,11 @@ def preencher_dados_basicos(driver, wait, cfg):
     swal_click_confirm(driver, wait, 'OK', 'Confirmar')
     wait_for_page_complete(driver, wait)
 
+    # 12b) Le o Nº da Dispensa gerado (prova de que salvou de fato)
+    dispensa_id = ler_id_dispensa(driver)
+    if dispensa_id:
+        log.info("Nº Dispensa SIGFIS gerado: %s", dispensa_id)
+
     # 13) Selecionar aba Itens
     try:
         itens_link = WebDriverWait(driver, 5, poll_frequency=0.2).until(
@@ -172,3 +178,5 @@ def preencher_dados_basicos(driver, wait, cfg):
         wait_for_page_complete(driver, wait)
     except TimeoutException:
         log.warning("Nao encontrei a aba Itens a partir de Dados Basicos; main.py tentara navegar.")
+
+    return dispensa_id
