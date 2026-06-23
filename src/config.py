@@ -34,6 +34,8 @@ ATO_DOCUMENTO = "1"
 TIPO_DOCUMENTO = "5"
 NUM_ITEM = 1
 REGISTRO_PRECO_VALUE = "false"   # "Registro de Preço" = Não (campo obrigatório novo)
+# Se True, registro sem documento (FILE_PATH vazio/ausente) NAO conta como 100%/completo.
+DOCUMENTO_OBRIGATORIO = True
 
 # ─── MAPEAMENTO DE COLUNAS (planilha -> chave usada no código) ──────────────────
 # A planilha do MPRJ usa nomes que divergem do código (ex.: 'data_ato' vs 'DATA_ATO',

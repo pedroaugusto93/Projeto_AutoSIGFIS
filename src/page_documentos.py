@@ -18,10 +18,10 @@ def preencher_documentos(driver, wait, cfg):
     # Validação antecipada e clara do arquivo (antes de abrir o modal)
     if not file_path or not str(file_path).strip():
         log.warning("FILE_PATH vazio na planilha; pulando inclusao de documento.")
-        return
+        return False
     if not os.path.isfile(file_path):
-        log.error("Arquivo de documento nao encontrado: %s", file_path)
-        raise FileNotFoundError(f"Arquivo não encontrado: {file_path}")
+        log.error("Arquivo de documento nao encontrado (%s); registro ficara SEM documento.", file_path)
+        return False
 
     # (1) Incluir Documento
     incluir_btn = wait.until(EC.presence_of_element_located((
@@ -81,3 +81,4 @@ def preencher_documentos(driver, wait, cfg):
 
     wait_for_page_complete(driver, wait)
     log.info("Documento incluido.")
+    return True

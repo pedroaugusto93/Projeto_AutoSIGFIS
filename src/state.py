@@ -69,10 +69,11 @@ class EstadoProcessados:
     def info(self, cfg):
         return self.data.get(assinatura(cfg))
 
-    def marcar(self, cfg, status: str, dispensa_id: str = "", detalhe: str = ""):
+    def marcar(self, cfg, status: str, dispensa_id: str = "", detalhe: str = "", perc=None):
         self.data[assinatura(cfg)] = {
             "status": status,
             "dispensa_id": dispensa_id or "",
+            "perc": perc,
             "detalhe": detalhe or "",
             "processo": cfg.get("PROCESSO"),
             "num_empenho": cfg.get("NUM_EMPENHO"),

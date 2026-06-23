@@ -27,7 +27,6 @@ from page_empenhos import preencher_empenhos
 
 log = get_logger("main")
 
-# Etapas que compoem 100% de um registro
 TOTAL_ETAPAS = 4  # 1 Dados Basicos, 2 Itens, 3 Documentos, 4 Empenhos
 
 
@@ -55,13 +54,16 @@ def selecionar_aba(driver, wait, titulo: str):
 
 
 def _chk(fn, driver, cfg, nome):
-    """Executa uma conferencia de read-back de forma segura e loga o resultado."""
     try:
         ok, msg = fn(driver, cfg)
     except Exception as e:
         ok, msg = False, f"{nome}: erro na verificacao ({e})"
     (log.info if ok else log.warning)("Conferencia -> %s", msg)
     return ok, msg
+
+
+def _tem_arquivo(cfg):
+    return bool(str(cfg.get("FILE_PATH", "")).strip())
 
 
 def main():
@@ -93,12 +95,26 @@ def main():
             if estado.ja_feito(cfg):
                 rec = estado.info(cfg) or {}
                 did = rec.get("dispensa_id", "")
+                stored = rec.get("status", "OK")
+                falta_doc = config.DOCUMENTO_OBRIGATORIO and not _tem_arquivo(cfg)
+
+                if stored in ("ALERTA", "INCOMPLETO", "SEM_DOC"):
+                    status_disp = stored
+                elif falta_doc:
+                    status_disp = "SEM_DOC"   # criado, mas sem documento
+                else:
+                    status_disp = "OK"
+
+                perc = rec.get("perc")
+                if perc is None:
+                    perc = 75 if (falta_doc or status_disp in ("INCOMPLETO", "SEM_DOC")) else 100
+
                 log.info("--- Registro %d/%d PULADO (dispensa ja criada: %s) | %s ---",
                          idx, len(cfgs), did or "?", proc)
                 report.add(registro=idx, processo=proc, nome_fornecedor=forn,
                            cnpj_fornecedor=cfg.get('CNPJ_FORNECEDOR'), valor=cfg.get('VALOR'),
                            num_empenho=cfg.get('NUM_EMPENHO'), dispensa_id=did,
-                           status="PULADO", perc_conclusao=100, validacoes="ja existente no estado",
+                           status=status_disp, perc_conclusao=perc, validacoes="ja existente no estado",
                            ultima_aba="-", etapa_falha="", erro_tipo="", erro_msg="",
                            duracao_s=0.0, inicio=inicio)
                 continue
@@ -112,7 +128,8 @@ def main():
             erro_tipo = ""
             erro_msg = ""
             dispensa_id = ""
-            etapas = 0          # quantas etapas (de TOTAL_ETAPAS) foram concluidas
+            etapas = 0
+            doc_incluido = None
             checagens = []
 
             try:
@@ -123,7 +140,7 @@ def main():
                 ultima_aba = "1 - Dados Basicos"
                 selecionar_aba(driver, wait, "1 - Dados Básicos")
                 dispensa_id = preencher_dados_basicos(driver, wait, cfg) or ""
-                etapas = 1
+                etapas += 1
                 if not dispensa_id:
                     log.warning("Nao consegui ler o Nº da Dispensa apos salvar (read-back vazio).")
                 try:
@@ -135,39 +152,59 @@ def main():
                 ultima_aba = "2 - Itens"
                 selecionar_aba(driver, wait, "Itens")
                 preencher_itens(driver, wait, cfg)
-                etapas = 2
+                etapas += 1
                 checagens.append(_chk(verify.verificar_item, driver, cfg, "Item"))
 
                 # === Aba 3: Documentos ===
                 ultima_aba = "3 - Documentos"
                 selecionar_aba(driver, wait, "3 - Documentos")
-                preencher_documentos(driver, wait, cfg)
-                etapas = 3
+                doc_incluido = preencher_documentos(driver, wait, cfg)
+                # so conta a etapa se o documento foi incluido (ou se nao for obrigatorio)
+                if doc_incluido or not config.DOCUMENTO_OBRIGATORIO:
+                    etapas += 1
                 checagens.append(_chk(verify.verificar_documento, driver, cfg, "Documento"))
 
                 # === Aba 4: Empenhos ===
                 ultima_aba = "4 - Empenhos"
                 selecionar_aba(driver, wait, "4 - Empenhos")
                 preencher_empenhos(driver, wait, cfg, valor_p1)
-                etapas = 4
+                etapas += 1
                 checagens.append(_chk(verify.verificar_empenho, driver, cfg, "Empenho"))
 
                 # === Envio ao TCE: desativado de proposito (dry-run) ===
 
                 todas_ok = all(ok for ok, _ in checagens)
-                status = "OK" if todas_ok else "ALERTA"
+                falta_doc = config.DOCUMENTO_OBRIGATORIO and (doc_incluido is False)
+                if not todas_ok:
+                    status = "ALERTA"
+                elif falta_doc:
+                    status = "SEM_DOC"
+                else:
+                    status = "OK"
+
                 if status == "OK":
                     log.info("[OK] Registro %d concluido e conferido: %s (dispensa %s)",
                              idx, proc, dispensa_id or "?")
+                elif status == "SEM_DOC":
+                    log.warning("[SEM DOC] Registro %d criado SEM documento (FILE_PATH vazio): %s (dispensa %s)",
+                                idx, proc, dispensa_id or "?")
                 else:
                     log.warning("[ALERTA] Registro %d criado, mas a conferencia apontou divergencia: %s",
                                 idx, proc)
+
+            except KeyboardInterrupt:
+                etapa_falha = ultima_aba
+                erro_tipo = "KeyboardInterrupt"
+                erro_msg = "interrompido pelo usuario"
+                # Se a dispensa ja foi criada, fica INCOMPLETO; senao, INTERROMPIDO (nao cadastrado)
+                status = "INCOMPLETO" if dispensa_id else "INTERROMPIDO"
+                log.warning("Registro %d interrompido na aba '%s' (status=%s).", idx, ultima_aba, status)
+                raise
 
             except Exception as e:
                 erro_tipo = type(e).__name__
                 erro_msg = (str(e).strip() or repr(e))
                 etapa_falha = ultima_aba
-                # Se ja existe dispensa_id, a dispensa FOI criada -> nao re-tentar (evita duplicar)
                 status = "INCOMPLETO" if dispensa_id else "ERRO"
                 log.error("[%s] Registro %d falhou na aba '%s' -> %s: %s",
                           status, idx, ultima_aba, erro_tipo, erro_msg)
@@ -177,7 +214,7 @@ def main():
             finally:
                 perc = round(etapas / TOTAL_ETAPAS * 100)
                 validacoes = " | ".join(msg for _, msg in checagens) if checagens else ""
-                estado.marcar(cfg, status, dispensa_id, validacoes)
+                estado.marcar(cfg, status, dispensa_id, validacoes, perc=perc)
                 report.add(registro=idx, processo=proc, nome_fornecedor=forn,
                            cnpj_fornecedor=cfg.get('CNPJ_FORNECEDOR'), valor=cfg.get('VALOR'),
                            num_empenho=cfg.get('NUM_EMPENHO'), dispensa_id=dispensa_id,
@@ -192,12 +229,10 @@ def main():
         except Exception:
             pass
 
-        # Resumo + percentual geral de conclusao do lote
         ok, nao_ok, total = report.resumo()
         completos = sum(1 for r in report.rows if r.get("perc_conclusao") == 100)
         perc_lote = round(completos / total * 100) if total else 0
 
-        # Escreve STATUS + PERC_CONCLUSAO de volta na planilha
         resultados = [{"registro": r["registro"], "status": r["status"],
                        "perc": r.get("perc_conclusao", 0)} for r in report.rows]
         planilha_status.escrever_status(config.EXCEL_PATH, config.SHEET_NAME, resultados)
