@@ -1,13 +1,15 @@
+# page_empenhos.py
+import time
+from datetime import datetime
 
-import config
-from helpers import wait_for_page_complete
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from datetime import datetime
-from selenium.common.exceptions import TimeoutException
-import time
 
-from helpers import aguardar_carregamento_final, safe_click
+from helpers import wait_for_page_complete, aguardar_carregamento_final, safe_click, swal_click_confirm
+from logger import get_logger
+
+log = get_logger("empenhos")
+
 
 def normaliza_data_empenho(valor):
     try:
@@ -25,7 +27,10 @@ def normaliza_data_empenho(valor):
         pass
     return valor
 
+
 def preencher_empenhos(driver, wait, cfg, *args):
+    log.info("Preenchendo Empenhos | NE=%s | Ano=%s", cfg.get('NUM_EMPENHO'), cfg.get('ANO_EMPENHO'))
+
     incluir_btn = wait.until(EC.element_to_be_clickable((By.XPATH,
         "//div[contains(@class,'tab-footer')]//button[contains(normalize-space(.),'Incluir Empenho')]"
     )))
@@ -53,26 +58,22 @@ def preencher_empenhos(driver, wait, cfg, *args):
                 "arguments[0].dispatchEvent(new Event('blur', {bubbles: true}));",
                 campo
             )
-            print(f"[Empenho] Preenchido: {seletor} = {valor}")
+            log.debug("Empenho: %s = %r", seletor, valor)
         except Exception as e:
-            print(f"ERRO: Não foi possível preencher o campo '{seletor}': {e}")
+            log.error("Nao foi possivel preencher o campo '%s': %s", seletor, e)
 
-    # Clique no botão Salvar do modal
+    # Salvar do modal
     salvar_btn = wait.until(EC.element_to_be_clickable((By.XPATH,
         "//div[contains(@class,'modal-footer')]//button[@type='submit' and contains(@class,'btn-outline-primary')]"
     )))
     safe_click(driver, wait, salvar_btn)
 
-    # Espera e clica no OK do SweetAlert2, se aparecer
-    from helpers import swal_click_confirm
     if swal_click_confirm(driver, wait, 'OK', 'Confirmar'):
-        print('SweetAlert2 OK clicado!')
+        log.debug("SweetAlert2 OK clicado.")
     else:
-        print('SweetAlert2 OK não apareceu ou já foi fechado.')
+        log.debug("SweetAlert2 OK nao apareceu ou ja foi fechado.")
         time.sleep(1)
 
     wait_for_page_complete(driver, wait)
-
-    # Espera adicional de estabilidade do Angular
-    print("[DEBUG] Aguardando carregamento completo final antes de enviar...")
     aguardar_carregamento_final(driver, wait)
+    log.info("Empenho incluido.")

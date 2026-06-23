@@ -5,6 +5,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
+from logger import get_logger
+
+log = get_logger("helpers")
 
 # Seletores típicos de overlay/loader do seu app (Angular, block-ui, spinners etc.)
 _OVERLAY_SELECTORS = [
@@ -70,6 +73,7 @@ def js_select_value(driver, select_el, value):
     """
     Define value em <select> escondido (Angular) e dispara eventos.
     """
+    log.debug("select -> %s", value)
     driver.execute_script(
         "arguments[0].value = arguments[1];"
         "arguments[0].dispatchEvent(new Event('input', {bubbles:true}));"
@@ -83,6 +87,10 @@ def fill_input(driver, wait, selector, value, by: By = By.CSS_SELECTOR, fire_eve
     Preenche inputs/textareas com scroll central, limpa com Ctrl+A+Del e dispara eventos.
     Retorna o elemento.
     """
+    # Log enxuto: o detalhe campo a campo vai para o arquivo de log (DEBUG)
+    val_preview = "" if value in (None, "") else str(value)
+    log.debug("fill  %s = %r", selector, val_preview)
+
     el = wait.until(EC.presence_of_element_located((by, selector)))
     driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
 
@@ -116,19 +124,33 @@ def fill_input(driver, wait, selector, value, by: By = By.CSS_SELECTOR, fire_eve
     return el
 
 
+def confirm_or_warn(driver, condition, descricao: str, timeout: float = 3.0) -> bool:
+    """
+    Aguarda `condition` por `timeout`. Em vez de estourar TimeoutException com
+    'Message:' vazio (que travava o registro inteiro), registra um WARNING e segue.
+    Retorna True se a condição foi satisfeita, False caso contrário.
+    """
+    try:
+        WebDriverWait(driver, timeout, poll_frequency=0.2).until(condition)
+        return True
+    except TimeoutException:
+        log.warning("Confirmacao nao satisfeita: %s", descricao)
+        return False
+
+
 def aguardar_carregamento_final(driver, wait, timeout: float = 6.0):
     """
     Espera final curta para sumir overlays/spinners reais.
     """
     try:
-        print("[DEBUG] Aguardando carregamento completo final...")
+        log.debug("Aguardando carregamento completo final...")
         WebDriverWait(driver, timeout, poll_frequency=0.2).until(
             lambda d: _has_busy_overlays(d) is False
         )
         time.sleep(0.1)
-        print("[✔] Página carregada e pronta.")
+        log.debug("Pagina carregada e pronta.")
     except TimeoutException:
-        print("[⚠] Timeout: overlays ainda aparentes; seguindo assim mesmo.")
+        log.warning("Timeout: overlays ainda aparentes; seguindo assim mesmo.")
 
 
 def safe_click(driver, wait, locator_or_element, scroll_block: str = 'center', use_js: bool = True):
@@ -190,7 +212,7 @@ def swal_click_confirm(driver, wait, *labels, timeout: float = 5.0):
         wants = [str(x).strip().lower() for x in labels if x]
         for b in btns:
             try:
-                if not b.is_displayed(): 
+                if not b.is_displayed():
                     continue
                 txt = (b.text or "").strip().lower()
                 if any(w in txt for w in wants):
@@ -253,4 +275,3 @@ def norm_money_digits(raw: str) -> str:
         out = (only_digits or "0") + "00"
         out = out.lstrip("0")
         return out or "0"
-
