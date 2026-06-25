@@ -1,0 +1,32 @@
+{
+  "202200010039512202686|2026NE02614|04481601701": {
+    "status": "ENVIADO",
+    "dispensa_id": "1414435",
+    "perc": 100,
+    "detalhe": "Item OK (total=R$ 739,40) | Documento OK (presente no grid) | Empenho OK (n=2026NE02614, v=739,40)",
+    "processo": "20.22.0001.0039512.2026-86",
+    "num_empenho": "2026NE02614",
+    "cnpj": "044.816.017-01",
+    "ts": "2026-06-25 01:46:27"
+  },
+  "202200010039512202686|2026NE02616|04746018707": {
+    "status": "ENVIADO",
+    "dispensa_id": "1414436",
+    "perc": 100,
+    "detalhe": "Item OK (total=R$ 462,14) | Documento OK (presente no grid) | Empenho OK (n=2026NE02616, v=462,14)",
+    "processo": "20.22.0001.0039512.2026-86",
+    "num_empenho": "2026NE02616",
+    "cnpj": "047.460.187-07",
+    "ts": "2026-06-25 01:46:47"
+  },
+  "202200010039512202686|2026NE02619|01266313796": {
+    "status": "ENVIADO",
+    "dispensa_id": "1414437",
+    "perc": 100,
+    "detalhe": "Item OK (total=R$ 813,34) | Documento OK (presente no grid) | Empenho OK (n=2026NE02619, v=813,34)",
+    "processo": "20.22.0001.0039512.2026-86",
+    "num_empenho": "2026NE02619",
+    "cnpj": "012.663.137-96",
+    "ts": "2026-06-25 01:47:02"
+  }
+}

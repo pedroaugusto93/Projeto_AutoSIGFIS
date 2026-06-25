@@ -5,7 +5,11 @@
 # & "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="C:\ChromeDebugProfile"
 #
 # Reprocessar tudo do zero (ignorar o estado; pode duplicar): set SIGFIS_FORCE=1
+<<<<<<< HEAD
 # zerar: Remove-Item .\src\logs\estado_processados.json
+=======
+
+>>>>>>> 0f2da928b43c20bb6be2695bc8f35b7527ca9fa0
 import os
 import sys
 import time

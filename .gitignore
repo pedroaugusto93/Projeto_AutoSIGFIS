@@ -26,7 +26,10 @@ Thumbs.db
 
 # no .gitignore (adicione ao final)
 cadastro.xlsx
+<<<<<<< HEAD
 
 # Logs e saídas geradas
 src/logs/
 recibos/
+=======
+>>>>>>> 0f2da928b43c20bb6be2695bc8f35b7527ca9fa0

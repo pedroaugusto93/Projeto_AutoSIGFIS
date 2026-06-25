@@ -21,10 +21,13 @@ URL_DISPENSA = (
     "https://www.tcerj.tc.br/"
     "sigfis-atosjuridicos/site/admin/dispensas-inexigibilidades/dispensas/criar"
 )
+<<<<<<< HEAD
 URL_CONSULTA = (
     "https://www.tcerj.tc.br/"
     "sigfis-atosjuridicos/site/admin/dispensas-inexigibilidades/dispensas/consulta"
 )
+=======
+>>>>>>> 0f2da928b43c20bb6be2695bc8f35b7527ca9fa0
 def _primeiro_caminho_existente(candidatos):
     """Retorna o primeiro caminho que existe (trabalho ou home office)."""
     for c in candidatos:
@@ -65,11 +68,14 @@ RECIBO_DIR = os.environ.get(
     "SIGFIS_RECIBO_DIR",
     r"C:\Users\pedro\OneDrive\Documentos\Projeto_AutoSIGFIS\recibos"
 )
+<<<<<<< HEAD
 # Pasta onde salvar os recibos baixados (pesquisa) e o PDF unico do lote.
 RECIBOS_LOTE_DIR = os.environ.get(
     "SIGFIS_RECIBOS_LOTE_DIR",
     os.path.join(os.path.dirname(RECIBO_DIR) or ".", "recibos_lote")
 )
+=======
+>>>>>>> 0f2da928b43c20bb6be2695bc8f35b7527ca9fa0
 
 # ─── MAPEAMENTO DE COLUNAS (planilha -> chave usada no código) ──────────────────
 # A planilha do MPRJ usa nomes que divergem do código (ex.: 'data_ato' vs 'DATA_ATO',
