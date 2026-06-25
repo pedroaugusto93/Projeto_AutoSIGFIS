@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual env
+venv/
+virtual/
+.env/
+
+# VS Code
+.vscode/
+
+# Logs / temporários
+*.log
+*.tmp
+*.swp
+
+# Office temporários (Word/Excel)
+~$*
+
+# SO
+.DS_Store
+Thumbs.db
+
+# no .gitignore (adicione ao final)
+cadastro.xlsx
+
+# Logs e saídas geradas
+src/logs/
+recibos/
