@@ -100,7 +100,7 @@ class ExecutionReport:
         self.rows.append(kwargs)
 
     def resumo(self):
-        ok = sum(1 for r in self.rows if r.get("status") == "OK")
+        ok = sum(1 for r in self.rows if r.get("status") in ("OK", "ENVIADO"))
         return ok, len(self.rows) - ok, len(self.rows)
 
     def save(self) -> Path:

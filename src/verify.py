@@ -14,6 +14,7 @@ Cada funcao retorna uma tupla (ok: bool, mensagem: str) e nunca lanca excecao.
 import re
 from selenium.webdriver.common.by import By
 
+from helpers import norm_money_digits
 from logger import get_logger
 
 log = get_logger("verify")
@@ -58,7 +59,7 @@ def verificar_item(driver, cfg):
             return False, "Item: nenhuma linha no grid"
         tds = row.find_elements(By.CSS_SELECTOR, "td")
         total = tds[6].text if len(tds) > 6 else ""
-        if _digitos(total) == _digitos(cfg.get("VALOR")):
+        if norm_money_digits(total) == norm_money_digits(cfg.get("VALOR")):
             return True, f"Item OK (total={total.strip()})"
         return False, f"Item divergente: grid={total.strip()} esperado={cfg.get('VALOR')}"
     except Exception as e:
@@ -88,7 +89,7 @@ def verificar_empenho(driver, cfg):
         numero = tds[4].text if len(tds) > 4 else ""
         valor = tds[5].text if len(tds) > 5 else ""
         n_ok = _alnum(numero) == _alnum(cfg.get("NUM_EMPENHO"))
-        v_ok = _digitos(valor) == _digitos(cfg.get("VALOR"))
+        v_ok = norm_money_digits(valor) == norm_money_digits(cfg.get("VALOR"))
         if n_ok and v_ok:
             return True, f"Empenho OK (n={numero.strip()}, v={valor.strip()})"
         falhas = []

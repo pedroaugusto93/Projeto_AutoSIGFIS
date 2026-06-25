@@ -1,4 +1,6 @@
 import os   # inserido para desabilitar verificação de certificado
+import re
+import socket
 import unicodedata
 import pandas as pd
 from selenium import webdriver
@@ -19,8 +21,22 @@ URL_DISPENSA = (
     "https://www.tcerj.tc.br/"
     "sigfis-atosjuridicos/site/admin/dispensas-inexigibilidades/dispensas/criar"
 )
-EXCEL_PATH = os.environ.get("SIGFIS_EXCEL_PATH", r"C:\Users\pedro\OneDrive\Documentos\Projeto_AutoSIGFIS\src\cadastro.xlsx") # Caminho do Excel no MPRJ "
-#EXCEL_PATH = os.environ.get("SIGFIS_EXCEL_PATH", r"C:\Users\pedro\Projeto_AutoSIGIFIS\Projeto_AutoSIGFIS\src\cadastro.xlsx") # Caminho do Excel no meu PC
+def _primeiro_caminho_existente(candidatos):
+    """Retorna o primeiro caminho que existe (trabalho ou home office)."""
+    for c in candidatos:
+        if c and os.path.isfile(c):
+            return c
+    # nenhum existe ainda: devolve o primeiro como padrao (a leitura avisara o erro)
+    return candidatos[0]
+
+
+# Caminhos possiveis do cadastro.xlsx (ora no trabalho, ora em home office).
+# A variavel de ambiente SIGFIS_EXCEL_PATH, se definida, tem prioridade sobre todos.
+EXCEL_PATHS = [
+    r"C:\Users\pedro.naia\OneDrive - MPRJ\Arquivo Morto\Documentos\Arquivo\Documentos\Projeto_AutoSIGFIS\src\cadastro.xlsx",  # MPRJ (trabalho)
+    r"C:\Users\pedro\OneDrive\Documentos\Projeto_AutoSIGFIS\src\cadastro.xlsx",                                              # PC pessoal (home office)
+]
+EXCEL_PATH = os.environ.get("SIGFIS_EXCEL_PATH") or _primeiro_caminho_existente(EXCEL_PATHS)
 SHEET_NAME = "Sheet1" # Nome da aba do Excel que contém as configurações
 
 # ─── CONSTANTES FIXAS ───────────────────────────────────────────────────────────
@@ -36,6 +52,15 @@ NUM_ITEM = 1
 REGISTRO_PRECO_VALUE = "false"   # "Registro de Preço" = Não (campo obrigatório novo)
 # Se True, registro sem documento (FILE_PATH vazio/ausente) NAO conta como 100%/completo.
 DOCUMENTO_OBRIGATORIO = True
+# IRREVERSIVEL: se True, apos preencher tudo o robo clica em "Enviar ao TCE".
+# So envia registros 100% OK (conferidos e com documento).
+ENVIAR_AO_TCE = True
+# Pasta onde salvar os recibos em PDF (apos enviar ao TCE). Varia por maquina:
+# edite o caminho abaixo OU defina a variavel de ambiente SIGFIS_RECIBO_DIR.
+RECIBO_DIR = os.environ.get(
+    "SIGFIS_RECIBO_DIR",
+    r"C:\Users\pedro\OneDrive\Documentos\Projeto_AutoSIGFIS\recibos"
+)
 
 # ─── MAPEAMENTO DE COLUNAS (planilha -> chave usada no código) ──────────────────
 # A planilha do MPRJ usa nomes que divergem do código (ex.: 'data_ato' vs 'DATA_ATO',
@@ -84,6 +109,23 @@ def _remap_columns(row: dict) -> dict:
     return out
 
 
+def _norm_data_br(valor):
+    """Converte datas variadas para dd/mm/aaaa.
+    O Excel as vezes entrega a celula de data como '2026-06-15 00:00:00' (ISO + hora),
+    e o bsdatepicker do SIGFIS so aceita dd/mm/aaaa -> sem isso aparece 'Invalid date'."""
+    s = str(valor or "").strip()
+    if not s:
+        return ""
+    s = s.split(" ")[0]  # descarta parte de hora, se houver
+    m = re.match(r"^(\d{4})-(\d{1,2})-(\d{1,2})$", s)        # ISO: aaaa-mm-dd
+    if m:
+        return f"{int(m.group(3)):02d}/{int(m.group(2)):02d}/{m.group(1)}"
+    m = re.match(r"^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$", s)  # dd/mm/aaaa ou dd-mm-aaaa
+    if m:
+        return f"{int(m.group(1)):02d}/{int(m.group(2)):02d}/{m.group(3)}"
+    return s
+
+
 def load_all_cfgs(path=EXCEL_PATH, sheet=SHEET_NAME):
     """
     Lê a aba `sheet` do Excel em `path` e retorna uma lista de dicionários,
@@ -102,6 +144,10 @@ def load_all_cfgs(path=EXCEL_PATH, sheet=SHEET_NAME):
             cfg.setdefault(k, "")
         cfg.setdefault('QTD_ITEM', QTD_ITEM)
         cfg.setdefault('NUM_ITEM', str(NUM_ITEM))  # default "1" se a coluna for removida
+
+        # Datas -> dd/mm/aaaa (evita "Invalid date" quando o Excel entrega data com hora)
+        cfg['DATA_ATO'] = _norm_data_br(cfg.get('DATA_ATO'))
+        cfg['DATA_EMPENHO'] = _norm_data_br(cfg.get('DATA_EMPENHO'))
 
         # Valores monetários: SEMPRE derivam de VALOR (ignora placeholders da planilha).
         # Antes, um "1" residual na coluna VALOR_EMPENHO virava R$ 0,01 no empenho.
@@ -128,7 +174,28 @@ def load_all_cfgs(path=EXCEL_PATH, sheet=SHEET_NAME):
     return cfg_list
 
 
+def _porta_aberta(host, porta, timeout=1.5):
+    try:
+        with socket.create_connection((host, int(porta)), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
 def create_driver_and_wait():
+    host, _, porta = DEBUGGER_ADDRESS.partition(":")
+    if not _porta_aberta(host, porta):
+        log.error(
+            "Nao consegui conectar ao Chrome em %s.\n"
+            "  >> O Chrome precisa estar ABERTO em modo debug ANTES de rodar o script.\n"
+            "  >> Feche TODAS as janelas do Chrome e, num PowerShell, rode:\n"
+            "     & \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\" "
+            "--remote-debugging-port=9222 --user-data-dir=\"C:\\ChromeDebugProfile\"\n"
+            "  >> Faca login no SIGFIS nessa janela e rode o script de novo.",
+            DEBUGGER_ADDRESS,
+        )
+        raise RuntimeError(f"Chrome em modo debug nao encontrado em {DEBUGGER_ADDRESS}")
+
     opts = Options()
     opts.add_experimental_option("debuggerAddress", DEBUGGER_ADDRESS)
     service = Service(ChromeDriverManager().install())

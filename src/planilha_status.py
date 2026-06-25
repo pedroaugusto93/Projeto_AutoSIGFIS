@@ -32,13 +32,15 @@ from logger import get_logger
 log = get_logger("planilha")
 
 TEXTO_STATUS = {
-    "OK":           "CADASTRADO COMPLETO",
-    "SEM_DOC":      "CADASTRADO SEM DOCUMENTO",
-    "ALERTA":       "CADASTRADO (CONFERIR DIVERGÊNCIA)",
-    "INCOMPLETO":   "CADASTRADO INCOMPLETO",
-    "INTERROMPIDO": "INTERROMPIDO (NÃO CADASTRADO)",
-    "ERRO":         "NÃO CADASTRADO (ERRO)",
-    "PULADO":       "JÁ CADASTRADO",
+    "OK":            "CADASTRADO COMPLETO",
+    "ENVIADO":       "ENVIADO AO TCE",
+    "ENVIO_PENDENTE":"COMPLETO - ENVIAR AO TCE MANUALMENTE",
+    "SEM_DOC":       "CADASTRADO SEM DOCUMENTO",
+    "ALERTA":        "CADASTRADO (CONFERIR DIVERGÊNCIA)",
+    "INCOMPLETO":    "CADASTRADO INCOMPLETO",
+    "INTERROMPIDO":  "INTERROMPIDO (NÃO CADASTRADO)",
+    "ERRO":          "NÃO CADASTRADO (ERRO)",
+    "PULADO":        "JÁ CADASTRADO",
 }
 
 
@@ -48,6 +50,16 @@ def _col_por_titulo(ws, titulo, header_row=1):
         if str(cell.value or "").strip().lower() == alvo:
             return cell.column  # 1-based
     return None
+
+
+def _col_por_titulo_ou_cria(ws, titulo, header_row=1):
+    """Como _col_por_titulo, mas cria a coluna no fim do cabecalho se nao existir."""
+    col = _col_por_titulo(ws, titulo, header_row)
+    if col:
+        return col
+    nova = (ws.max_column or 0) + 1
+    ws.cell(row=header_row, column=nova, value=titulo)
+    return nova
 
 
 def _abrir_com_retentativa(p, tentativas, espera):
@@ -111,11 +123,12 @@ def escrever_status(excel_path, sheet, resultados, header_row=1, tentativas=3, e
 
     col_status = _col_por_titulo(ws, "STATUS", header_row)
     col_perc = _col_por_titulo(ws, "PERC_CONCLUSAO", header_row)
+    col_disp = _col_por_titulo_ou_cria(ws, "DISPENSA_SIGFIS", header_row)
     if col_status is None:
         log.warning("Coluna 'STATUS' nao encontrada no cabecalho; status nao sera gravado.")
     if col_perc is None:
         log.warning("Coluna 'PERC_CONCLUSAO' nao encontrada no cabecalho; percentual nao sera gravado.")
-    if col_status is None and col_perc is None:
+    if col_status is None and col_perc is None and col_disp is None:
         log.warning("Nenhuma coluna de resultado encontrada; nada a gravar na planilha.")
         return
 
@@ -127,6 +140,8 @@ def escrever_status(excel_path, sheet, resultados, header_row=1, tentativas=3, e
                         value=TEXTO_STATUS.get(r.get("status"), r.get("status")))
             if col_perc is not None:
                 ws.cell(row=linha, column=col_perc, value=f'{int(r.get("perc", 0))}%')
+            if col_disp is not None and str(r.get("dispensa") or "").strip():
+                ws.cell(row=linha, column=col_disp, value=str(r.get("dispensa")).strip())
         except Exception as e:
             log.warning("Falha ao escrever resultado do registro %s: %s", r.get("registro"), e)
 

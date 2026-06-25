@@ -112,8 +112,11 @@ def preencher_dados_basicos(driver, wait, cfg):
     aviso_se_vazio('DATA_ATO')
     fill_input(driver, wait, data_selector, cfg['DATA_ATO'])
     if str(cfg.get('DATA_ATO', "")).strip():
-        confirm_or_warn(driver, lambda d: d.find_element(By.CSS_SELECTOR, data_selector)
-                        .get_attribute('value').strip() != "", "Data do Ato nao foi gravada")
+        confirm_or_warn(
+            driver,
+            lambda d: ('invalid' not in (d.find_element(By.CSS_SELECTOR, data_selector).get_attribute('class') or '').lower())
+                      and d.find_element(By.CSS_SELECTOR, data_selector).get_attribute('value').strip() != "",
+            "Data do Ato ficou invalida ou vazia (esperado dd/mm/aaaa)")
 
     # 8) Fornecedor (CNPJ + nome/autofill com fallback)
     forn_cnpj_selector = 'app-pessoa-pesquisa-cadastro[name="fornecedor"] input[name="cpfCnpj"]'
@@ -128,6 +131,7 @@ def preencher_dados_basicos(driver, wait, cfg):
         lambda d: d.find_element(By.CSS_SELECTOR, nome_sel).get_attribute('value').strip()
         == cfg['NOME_FORNECEDOR'].strip(),
         "Autofill do nome do fornecedor nao casou; preenchendo manualmente",
+        timeout=1.2,  # CPF de pessoa fisica raramente tem autofill; cai rapido para o preenchimento manual
     )
     if not autofill_ok:
         try:

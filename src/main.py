@@ -24,6 +24,7 @@ from page_dados_basicos import preencher_dados_basicos
 from page_itens import preencher_itens
 from page_documentos import preencher_documentos
 from page_empenhos import preencher_empenhos
+import page_enviar
 
 log = get_logger("main")
 
@@ -71,7 +72,8 @@ def main():
     force = str(os.environ.get("SIGFIS_FORCE", "")).strip().lower() in ("1", "true", "sim", "s", "yes")
 
     log.info("=" * 60)
-    log.info("AutoSIGFIS iniciado (preenchimento; NAO envia ao TCE) | FORCE=%s", force)
+    log.info("AutoSIGFIS iniciado | envio ao TCE=%s | FORCE=%s",
+             "LIGADO" if config.ENVIAR_AO_TCE else "desligado", force)
     log.info("=" * 60)
 
     report = ExecutionReport()
@@ -82,7 +84,11 @@ def main():
         log.error("Nenhuma config encontrada em: %s", config.EXCEL_PATH)
         return
 
-    driver, wait = config.create_driver_and_wait()
+    try:
+        driver, wait = config.create_driver_and_wait()
+    except Exception as e:
+        log.error("Nao foi possivel iniciar o navegador; nada foi processado. (%s)", e)
+        return
 
     try:
         for idx, cfg in enumerate(cfgs, start=1):
@@ -98,7 +104,7 @@ def main():
                 stored = rec.get("status", "OK")
                 falta_doc = config.DOCUMENTO_OBRIGATORIO and not _tem_arquivo(cfg)
 
-                if stored in ("ALERTA", "INCOMPLETO", "SEM_DOC"):
+                if stored in ("ALERTA", "INCOMPLETO", "SEM_DOC", "ENVIADO", "ENVIO_PENDENTE"):
                     status_disp = stored
                 elif falta_doc:
                     status_disp = "SEM_DOC"   # criado, mas sem documento
@@ -182,9 +188,24 @@ def main():
                 else:
                     status = "OK"
 
+                # === Envio ao TCE (IRREVERSIVEL) — so para registros 100% OK ===
+                if config.ENVIAR_AO_TCE and status == "OK":
+                    ultima_aba = "5 - Enviar ao TCE"
+                    enviado = page_enviar.enviar_ao_tce(driver, wait, cfg)
+                    status = "ENVIADO" if enviado else "ENVIO_PENDENTE"
+                elif config.ENVIAR_AO_TCE and status != "OK":
+                    log.warning("Registro %d NAO enviado ao TCE (status=%s; so envia completos/OK).",
+                                idx, status)
+
                 if status == "OK":
                     log.info("[OK] Registro %d concluido e conferido: %s (dispensa %s)",
                              idx, proc, dispensa_id or "?")
+                elif status == "ENVIADO":
+                    log.info("[ENVIADO] Registro %d enviado ao TCE: %s (dispensa %s)",
+                             idx, proc, dispensa_id or "?")
+                elif status == "ENVIO_PENDENTE":
+                    log.warning("[ENVIO PENDENTE] Registro %d completo, mas envio ao TCE NAO confirmado: %s (dispensa %s)",
+                                idx, proc, dispensa_id or "?")
                 elif status == "SEM_DOC":
                     log.warning("[SEM DOC] Registro %d criado SEM documento (FILE_PATH vazio): %s (dispensa %s)",
                                 idx, proc, dispensa_id or "?")
@@ -234,7 +255,8 @@ def main():
         perc_lote = round(completos / total * 100) if total else 0
 
         resultados = [{"registro": r["registro"], "status": r["status"],
-                       "perc": r.get("perc_conclusao", 0)} for r in report.rows]
+                       "perc": r.get("perc_conclusao", 0),
+                       "dispensa": r.get("dispensa_id", "")} for r in report.rows]
         planilha_status.escrever_status(config.EXCEL_PATH, config.SHEET_NAME, resultados)
 
         extrato_path = report.save()

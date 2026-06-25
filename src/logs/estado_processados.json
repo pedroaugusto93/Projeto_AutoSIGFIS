@@ -1,58 +1,32 @@
 {
+  "202200010039512202686|2026NE02614|04481601701": {
+    "status": "ENVIADO",
+    "dispensa_id": "1414435",
+    "perc": 100,
+    "detalhe": "Item OK (total=R$ 739,40) | Documento OK (presente no grid) | Empenho OK (n=2026NE02614, v=739,40)",
+    "processo": "20.22.0001.0039512.2026-86",
+    "num_empenho": "2026NE02614",
+    "cnpj": "044.816.017-01",
+    "ts": "2026-06-25 01:46:27"
+  },
   "202200010039512202686|2026NE02616|04746018707": {
-    "status": "OK",
-    "dispensa_id": "1414189",
-    "detalhe": "Item OK (total=R$ 462,14) | Documento: sem arquivo (FILE_PATH vazio) - ignorado | Empenho OK (n=2026NE02616, v=462,14)",
+    "status": "ENVIADO",
+    "dispensa_id": "1414436",
+    "perc": 100,
+    "detalhe": "Item OK (total=R$ 462,14) | Documento OK (presente no grid) | Empenho OK (n=2026NE02616, v=462,14)",
     "processo": "20.22.0001.0039512.2026-86",
     "num_empenho": "2026NE02616",
     "cnpj": "047.460.187-07",
-    "ts": "2026-06-23 08:55:34"
+    "ts": "2026-06-25 01:46:47"
   },
-  "202200010039512202686|2026NE02617|07777128736": {
-    "status": "OK",
-    "dispensa_id": "1414191",
-    "detalhe": "Item OK (total=R$ 554,55) | Documento: sem arquivo (FILE_PATH vazio) - ignorado | Empenho OK (n=2026NE02617, v=554,55)",
+  "202200010039512202686|2026NE02619|01266313796": {
+    "status": "ENVIADO",
+    "dispensa_id": "1414437",
+    "perc": 100,
+    "detalhe": "Item OK (total=R$ 813,34) | Documento OK (presente no grid) | Empenho OK (n=2026NE02619, v=813,34)",
     "processo": "20.22.0001.0039512.2026-86",
-    "num_empenho": "2026NE02617",
-    "cnpj": "077.771.287-36",
-    "ts": "2026-06-23 09:02:29"
-  },
-  "202200010039512202686|2026NE02623|57349380682": {
-    "status": "OK",
-    "dispensa_id": "1414194",
-    "detalhe": "Item OK (total=R$ 2.218,19) | Documento: sem arquivo (FILE_PATH vazio) - ignorado | Empenho OK (n=2026NE02623, v=2.218,19)",
-    "processo": "20.22.0001.0039512.2026-86",
-    "num_empenho": "2026NE02623",
-    "cnpj": "573.493.806-82",
-    "ts": "2026-06-23 09:10:16"
-  },
-  "202200010039512202686|2026NE02620|00149328737": {
-    "status": "OK",
-    "dispensa_id": "1414218",
-    "detalhe": "Item OK (total=R$ 739,45) | Documento: sem arquivo (FILE_PATH vazio) - ignorado | Empenho OK (n=2026NE02620, v=739,45)",
-    "processo": "20.22.0001.0039512.2026-86",
-    "num_empenho": "2026NE02620",
-    "cnpj": "001.493.287-37",
-    "ts": "2026-06-23 10:38:16"
-  },
-  "202200010039512202686|2026NE02622|03540437738": {
-    "status": "INCOMPLETO",
-    "dispensa_id": "1414233",
-    "perc": 50,
-    "detalhe": "Item OK (total=R$ 924,27) | Documento: sem arquivo (FILE_PATH vazio) - ignorado",
-    "processo": "20.22.0001.0039512.2026-86",
-    "num_empenho": "2026NE02622",
-    "cnpj": "035.404.377-38",
-    "ts": "2026-06-23 11:34:25"
-  },
-  "202200010039512202686|2026NE02618|03237113751": {
-    "status": "ALERTA",
-    "dispensa_id": "1414250",
-    "perc": 75,
-    "detalhe": "Item divergente: grid=R$ 1.109,10 esperado=1109.1 | Documento: sem arquivo (FILE_PATH vazio) - ignorado | Empenho divergente: valor grid=1.109,10 esperado=1109.1",
-    "processo": "20.22.0001.0039512.2026-86",
-    "num_empenho": "2026NE02618",
-    "cnpj": "032.371.137-51",
-    "ts": "2026-06-23 13:02:44"
+    "num_empenho": "2026NE02619",
+    "cnpj": "012.663.137-96",
+    "ts": "2026-06-25 01:47:02"
   }
 }
