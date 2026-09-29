@@ -21,13 +21,10 @@ URL_DISPENSA = (
     "https://www.tcerj.tc.br/"
     "sigfis-atosjuridicos/site/admin/dispensas-inexigibilidades/dispensas/criar"
 )
-<<<<<<< HEAD
 URL_CONSULTA = (
     "https://www.tcerj.tc.br/"
     "sigfis-atosjuridicos/site/admin/dispensas-inexigibilidades/dispensas/consulta"
 )
-=======
->>>>>>> 0f2da928b43c20bb6be2695bc8f35b7527ca9fa0
 def _primeiro_caminho_existente(candidatos):
     """Retorna o primeiro caminho que existe (trabalho ou home office)."""
     for c in candidatos:
@@ -40,9 +37,10 @@ def _primeiro_caminho_existente(candidatos):
 # Caminhos possiveis do cadastro.xlsx (ora no trabalho, ora em home office).
 # A variavel de ambiente SIGFIS_EXCEL_PATH, se definida, tem prioridade sobre todos.
 EXCEL_PATHS = [
-    r"C:\Users\pedro.naia\OneDrive - MPRJ\Arquivo Morto\Documentos\Arquivo\Documentos\Projeto_AutoSIGFIS\src\cadastro.xlsx",  # MPRJ (trabalho)
-    r"C:\Users\pedro\OneDrive\Documentos\Projeto_AutoSIGFIS\src\cadastro.xlsx",                                              # PC pessoal (home office)
-]
+    os.path.join(os.path.dirname(__file__), "cadastro.xlsx"),
+    r"C:\Users\pedro\OneDrive\Documentos\Projeto_AutoSIGFIS\src\cadastro.xlsx",
+]                                        # PC pessoal (home office)
+
 EXCEL_PATH = os.environ.get("SIGFIS_EXCEL_PATH") or _primeiro_caminho_existente(EXCEL_PATHS)
 SHEET_NAME = "Sheet1" # Nome da aba do Excel que contém as configurações
 
@@ -68,14 +66,11 @@ RECIBO_DIR = os.environ.get(
     "SIGFIS_RECIBO_DIR",
     r"C:\Users\pedro\OneDrive\Documentos\Projeto_AutoSIGFIS\recibos"
 )
-<<<<<<< HEAD
 # Pasta onde salvar os recibos baixados (pesquisa) e o PDF unico do lote.
 RECIBOS_LOTE_DIR = os.environ.get(
     "SIGFIS_RECIBOS_LOTE_DIR",
     os.path.join(os.path.dirname(RECIBO_DIR) or ".", "recibos_lote")
 )
-=======
->>>>>>> 0f2da928b43c20bb6be2695bc8f35b7527ca9fa0
 
 # ─── MAPEAMENTO DE COLUNAS (planilha -> chave usada no código) ──────────────────
 # A planilha do MPRJ usa nomes que divergem do código (ex.: 'data_ato' vs 'DATA_ATO',
