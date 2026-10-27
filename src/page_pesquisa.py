@@ -29,6 +29,7 @@ from selenium.common.exceptions import TimeoutException
 from helpers import wait_for_page_complete, safe_click
 from logger import get_logger
 import recibo_pdf
+from nomes_recibos import nome_recibo_tce, caminho_disponivel
 
 log = get_logger("pesquisa")
 
@@ -293,10 +294,8 @@ def _proxima_pagina(driver, wait):
 
 
 def _nome_arquivo(processo, dispensa, fornecedor):
-    base = f"{processo}_{dispensa}_{fornecedor}".strip("_")
-    base = re.sub(r'[\\/:*?"<>|\r\n\t]+', "", base)
-    base = re.sub(r"\s+", " ", base).strip()
-    return (base[:150] or "recibo") + ".pdf"
+    # A dispensa diferencia homonimos apenas quando outro PDF ja existe.
+    return nome_recibo_tce(processo, fornecedor)
 
 
 def baixar_recibos_do_processo(driver, wait, processo, pasta_individuais=None):
@@ -305,10 +304,9 @@ def baixar_recibos_do_processo(driver, wait, processo, pasta_individuais=None):
     Retorna a lista de caminhos PDF salvos.
     """
     if pasta_individuais is None:
-        pasta_individuais = os.path.join(
-            config.RECIBOS_LOTE_DIR,
-            "individuais"
-        )
+        pasta_individuais = config.RECIBO_DIR
+    if not pasta_individuais:
+        raise RuntimeError("Pasta de recibos nao configurada.")
 
     os.makedirs(pasta_individuais, exist_ok=True)
 
@@ -367,14 +365,13 @@ def baixar_recibos_do_processo(driver, wait, processo, pasta_individuais=None):
                 )
                 continue
 
-            dest = os.path.join(
-                pasta_individuais,
-                _nome_arquivo(
-                    processo,
-                    disp,
-                    r["fornecedor"]
-                )
-            )
+            try:
+                arquivo = _nome_arquivo(processo, disp, r["fornecedor"])
+            except ValueError as erro:
+                log.error("Dispensa %s sem dados suficientes para nomear recibo: %s", disp, erro)
+                _fechar_modal(driver)
+                continue
+            dest = caminho_disponivel(pasta_individuais, arquivo)
 
             ok, _proto = recibo_pdf.capturar_recibo_nova_aba(
                 driver,
