@@ -32,6 +32,7 @@ from selenium.webdriver.common.by import By
 from helpers import wait_for_page_complete, safe_click, swal_click_confirm
 from logger import get_logger
 import config
+from nomes_recibos import nome_recibo_tce, caminho_disponivel
 
 log = get_logger("enviar")
 
@@ -90,25 +91,26 @@ def _visiveis(driver, xpath):
 
 
 def _nome_arquivo(cfg):
-    """Nome do recibo = numero do processo + nome do fornecedor, sem chars proibidos."""
-    proc = str(cfg.get("PROCESSO", "") or "").strip()
-    forn = str(cfg.get("NOME_FORNECEDOR", "") or "").strip()
-    base = f"{proc}_{forn}".strip("_")
-    base = re.sub(r'[\\/:*?"<>|\r\n\t]+', "", base)   # proibidos no Windows
-    base = re.sub(r"\s+", " ", base).strip()
-    return (base[:150] or "recibo") + ".pdf"
+    return nome_recibo_tce(cfg.get("PROCESSO"), cfg.get("NOME_FORNECEDOR"))
 
 
 def salvar_recibo_pdf(driver, wait, cfg):
     """Isola o recibo, extrai o protocolo e gera o PDF via CDP. Retorna o caminho salvo ou ''."""
-    dest_dir = getattr(config, "RECIBO_DIR", "") or os.getcwd()
+    dest_dir = config.RECIBO_DIR
+    if not dest_dir:
+        log.error("Pasta de recibos nao configurada; PDF nao sera salvo.")
+        return ""
     try:
         os.makedirs(dest_dir, exist_ok=True)
     except Exception as e:
         log.error("Nao consegui criar a pasta de recibos (%s): %s", dest_dir, e)
         return ""
 
-    dest = os.path.join(dest_dir, _nome_arquivo(cfg))
+    try:
+        dest = caminho_disponivel(dest_dir, _nome_arquivo(cfg))
+    except ValueError as erro:
+        log.error("Nao foi possivel identificar o recibo: %s", erro)
+        return ""
     try:
         wait_for_page_complete(driver, wait)
     except Exception:
