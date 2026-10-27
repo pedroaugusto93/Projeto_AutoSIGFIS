@@ -71,6 +71,7 @@ def _tem_arquivo(cfg):
 
 
 def main():
+    config.configurar_caminhos()
     setup_logging()
     force = str(os.environ.get("SIGFIS_FORCE", "")).strip().lower() in ("1", "true", "sim", "s", "yes")
 
