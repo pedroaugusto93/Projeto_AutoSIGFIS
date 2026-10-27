@@ -19,9 +19,10 @@ import time
 import base64
 import unicodedata
 from pathlib import Path
-from typing import Dict
 
 import pandas as pd
+from entrada_caminhos import solicitar_caminhos
+from nomes_recibos import nome_recibo_tce, caminho_disponivel
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -33,11 +34,8 @@ from selenium.common.exceptions import TimeoutException, StaleElementReferenceEx
 
 # ===== Config =====
 BASE_DIR   = Path(__file__).resolve().parent
-# EXCEL_PATH = r"C:\Users\pedro\Projeto_AutoSIGIFIS\Projeto_AutoSIGFIS\src\cadastro.xlsx"
-# EXCEL_PATH = str((Path(__file__).resolve().parent / "src" / "cadastro.xlsx").resolve())
-EXCEL_PATH = str((BASE_DIR / "cadastro.xlsx").resolve())
-# SAVE_DIR = r"C:\Users\pedro\Downloads\Teste"
-SAVE_DIR   = r"C:\Users\pedro\Downloads\Teste"
+EXCEL_PATH = None
+SAVE_DIR = None
 SHEET_NAME = "Sheet2"
 
 SIGFIS_CONSULTA_URL = "https://www.tcerj.tc.br/sigfis-atosjuridicos/site/admin/dispensas-inexigibilidades/dispensas/consulta"
@@ -254,9 +252,6 @@ def baixar_recibos_em_todas_paginas(driver, processo_atual: str, total_counter: 
     """Percorre todas as páginas do grid para o processo pesquisado atual."""
     wait = WebDriverWait(driver, 20, poll_frequency=0.2)
 
-    # Sequenciais por processo (para o nome do arquivo)
-    seq_por_processo: Dict[str, int] = {}
-
     # Volta para a primeira página (se existir)
     first = driver.find_elements(By.CSS_SELECTOR, PAGINATION_FIRST)
     if first:
@@ -274,6 +269,19 @@ def baixar_recibos_em_todas_paginas(driver, processo_atual: str, total_counter: 
             if not numero_processo:
                 continue
 
+            # Nome do fornecedor: coluna 6 da grade do SIGFIS.
+            fornecedor = driver.execute_script(
+                "const tr=document.querySelectorAll('#datagrid-0 tbody tr')[arguments[0]];"
+                "const td=tr&&tr.querySelectorAll('td')[6];"
+                "return td?(td.innerText||'').trim():'';",
+                row_idx,
+            )
+            try:
+                filename = nome_recibo_tce(numero_processo, fornecedor)
+            except ValueError as erro:
+                print(f"[SKIP] linha {row_idx+1}: {erro}")
+                continue
+
             # 2) pula se não houver botão de recibo
             if not tem_clipboard_na_linha_idx(driver, row_idx):
                 print(f"[SKIP] linha {row_idx+1}: sem recibo (só lupa). Processo: {numero_processo}")
@@ -287,13 +295,8 @@ def baixar_recibos_em_todas_paginas(driver, processo_atual: str, total_counter: 
 
             inner_html = body_el.get_attribute("innerHTML")
 
-            # 4) sequencial e caminho
-            seq_por_processo.setdefault(numero_processo, 0)
-            seq_por_processo[numero_processo] += 1
-            seq = seq_por_processo[numero_processo]
-
-            filename = f"{numero_processo}-{seq}.pdf"
-            dest = os.path.join(SAVE_DIR, filename)
+            # 4) salva com prefixo TCE e sufixo de duplicidade, se necessario.
+            dest = caminho_disponivel(SAVE_DIR, filename)
 
             # 5) imprime via aba temporária
             current_handle = driver.current_window_handle
@@ -323,6 +326,8 @@ def baixar_recibos_em_todas_paginas(driver, processo_atual: str, total_counter: 
             break
 
 def main():
+    global EXCEL_PATH, SAVE_DIR
+    EXCEL_PATH, SAVE_DIR = solicitar_caminhos()
     Path(SAVE_DIR).mkdir(parents=True, exist_ok=True)
 
     # Carrega processos da planilha
