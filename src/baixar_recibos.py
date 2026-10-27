@@ -63,6 +63,7 @@ def _ler_processos_terminal():
 
 
 def main():
+    config.configurar_caminhos()
     setup_logging()
 
     log.info("=" * 60)
@@ -86,7 +87,7 @@ def main():
         )
         return
 
-    dest_dir = config.RECIBOS_LOTE_DIR
+    dest_dir = config.RECIBO_DIR
     os.makedirs(dest_dir, exist_ok=True)
 
     carimbo = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -120,7 +121,7 @@ def main():
                 continue
 
             # um PDF unico POR PROCESSO
-            nome = f"recibos_{_slug(proc)}_{carimbo}.pdf"
+            nome = f"TCE - LOTE - {_slug(proc)} - {carimbo}.pdf"
             destino = os.path.join(dest_dir, nome)
 
             final = pdf_merge.juntar_pdfs(
@@ -174,7 +175,7 @@ def main():
 
     log.info(
         "Recibos individuais em: %s",
-        os.path.join(dest_dir, "individuais")
+        dest_dir
     )
 
     log.info("=" * 60)
