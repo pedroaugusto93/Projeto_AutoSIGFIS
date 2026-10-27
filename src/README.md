@@ -69,3 +69,26 @@ Projeto_AutoSIGFIS/
 
 - Os campos são preenchidos automaticamente seguindo as regras do SIGFIS.
 - O `.gitignore` já está configurado para ignorar arquivos temporários e ambientes virtuais.
+
+## Caminhos de entrada e recibos
+
+Ao executar `python src/main.py`, o AutoSIGFIS solicita, sempre nesta ordem:
+
+1. `Informe o caminho completo da planilha de cadastro:`
+2. `Informe o caminho da pasta onde os recibos serao salvos:`
+
+Cole os caminhos completos entre aspas duplas (por exemplo,
+`"C:\Pasta Compartilhada\Controle.xlsx"`). O segundo input aparece somente
+apos a validacao do primeiro. Os caminhos nao ficam gravados no projeto.
+
+Todos os recibos individuais sao salvos na pasta indicada, como
+`TCE - 20.22.0001.0063479.2026-64 - Empresa Exemplo Ltda.pdf`.
+Caso o nome ja exista, um sufixo numerico evita a sobrescrita.
+
+O script `python src/baixar_recibos.py` utiliza os mesmos dois prompts.
+O script legado `python src/pesquisa_downloads5.py` tambem solicita esses
+caminhos. Para executar os testes locais:
+
+```bash
+python -m unittest discover -s tests
+```
