@@ -25,23 +25,22 @@ URL_CONSULTA = (
     "https://www.tcerj.tc.br/"
     "sigfis-atosjuridicos/site/admin/dispensas-inexigibilidades/dispensas/consulta"
 )
-def _primeiro_caminho_existente(candidatos):
-    """Retorna o primeiro caminho que existe (trabalho ou home office)."""
-    for c in candidatos:
-        if c and os.path.isfile(c):
-            return c
-    # nenhum existe ainda: devolve o primeiro como padrao (a leitura avisara o erro)
-    return candidatos[0]
+# Os caminhos serao informados no terminal, a cada execucao.
+EXCEL_PATH = None
+RECIBO_DIR = None
+RECIBOS_LOTE_DIR = None
 
 
-# Caminhos possiveis do cadastro.xlsx (ora no trabalho, ora em home office).
-# A variavel de ambiente SIGFIS_EXCEL_PATH, se definida, tem prioridade sobre todos.
-EXCEL_PATHS = [
-    os.path.join(os.path.dirname(__file__), "cadastro.xlsx"),
-    r"C:\Users\pedro\OneDrive\Documentos\Projeto_AutoSIGFIS\src\cadastro.xlsx",
-]                                        # PC pessoal (home office)
+def configurar_caminhos():
+    """Solicita e compartilha os dois caminhos antes de qualquer processamento."""
+    global EXCEL_PATH, RECIBO_DIR, RECIBOS_LOTE_DIR
+    from entrada_caminhos import solicitar_caminhos
 
-EXCEL_PATH = os.environ.get("SIGFIS_EXCEL_PATH") or _primeiro_caminho_existente(EXCEL_PATHS)
+    EXCEL_PATH, RECIBO_DIR = solicitar_caminhos()
+    # Mantem o nome antigo como alias para os fluxos de consulta.
+    RECIBOS_LOTE_DIR = RECIBO_DIR
+
+
 SHEET_NAME = "Sheet1" # Nome da aba do Excel que contém as configurações
 
 # ─── CONSTANTES FIXAS ───────────────────────────────────────────────────────────
@@ -60,18 +59,6 @@ DOCUMENTO_OBRIGATORIO = True
 # IRREVERSIVEL: se True, apos preencher tudo o robo clica em "Enviar ao TCE".
 # So envia registros 100% OK (conferidos e com documento).
 ENVIAR_AO_TCE = True
-# Pasta onde salvar os recibos em PDF (apos enviar ao TCE). Varia por maquina:
-# edite o caminho abaixo OU defina a variavel de ambiente SIGFIS_RECIBO_DIR.
-RECIBO_DIR = os.environ.get(
-    "SIGFIS_RECIBO_DIR",
-    r"C:\Users\pedro\OneDrive\Documentos\Projeto_AutoSIGFIS\recibos"
-)
-# Pasta onde salvar os recibos baixados (pesquisa) e o PDF unico do lote.
-RECIBOS_LOTE_DIR = os.environ.get(
-    "SIGFIS_RECIBOS_LOTE_DIR",
-    os.path.join(os.path.dirname(RECIBO_DIR) or ".", "recibos_lote")
-)
-
 # ─── MAPEAMENTO DE COLUNAS (planilha -> chave usada no código) ──────────────────
 # A planilha do MPRJ usa nomes que divergem do código (ex.: 'data_ato' vs 'DATA_ATO',
 # 'CNPJ_CPF_FORNECEDOR' vs 'CNPJ_FORNECEDOR'). Sem esse de-para, o código lê "" e trava.
@@ -136,11 +123,14 @@ def _norm_data_br(valor):
     return s
 
 
-def load_all_cfgs(path=EXCEL_PATH, sheet=SHEET_NAME):
+def load_all_cfgs(path=None, sheet=SHEET_NAME):
     """
     Lê a aba `sheet` do Excel em `path` e retorna uma lista de dicionários,
     um por linha, com as chaves já normalizadas para os nomes esperados pelo código.
     """
+    path = path or EXCEL_PATH
+    if not path:
+        raise RuntimeError("O caminho da planilha nao foi configurado.")
     log.info("Lendo planilha: %s (aba %s)", path, sheet)
     df = pd.read_excel(path, sheet_name=sheet, dtype=str).fillna("")
     log.debug("Colunas encontradas: %s", list(df.columns))
